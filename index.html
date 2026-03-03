@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simple Interest Rate Calculator</title>
+  <meta name="theme-color" content="#203a43" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Interest Calc" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      padding: 20px;
+    }
+
+    .calculator {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .calculator h1 {
+      text-align: center;
+      color: #2c5364;
+      margin-bottom: 8px;
+      font-size: 1.6rem;
+    }
+
+    .calculator p.subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #333;
+      font-size: 0.9rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    .form-group input:focus {
+      border-color: #2c5364;
+    }
+
+    .form-group input.error {
+      border-color: #e74c3c;
+    }
+
+    .date-row {
+      display: flex;
+      gap: 16px;
+    }
+
+    .date-row .form-group {
+      flex: 1;
+    }
+
+    .date-inputs {
+      display: grid;
+      gap: 8px;
+    }
+
+    .date-hint {
+      color: #666;
+      font-size: 0.78rem;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #203a43, #2c5364);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      margin-top: 4px;
+    }
+
+    .btn:hover {
+      opacity: 0.92;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn.secondary {
+      margin-top: 12px;
+      background: #fff;
+      color: #2c5364;
+      border: 2px solid #2c5364;
+    }
+
+    .error-msg {
+      color: #e74c3c;
+      font-size: 0.85rem;
+      margin-top: 6px;
+      min-height: 20px;
+    }
+
+    /* Results */
+    .results {
+      margin-top: 28px;
+      padding: 24px;
+      background: #f0f7fa;
+      border-radius: 12px;
+      display: none;
+    }
+
+    .results.show {
+      display: block;
+      animation: fadeIn 0.35s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .results h2 {
+      text-align: center;
+      color: #2c5364;
+      margin-bottom: 16px;
+      font-size: 1.15rem;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #d8e8ee;
+      font-size: 0.95rem;
+    }
+
+    .result-row:last-child {
+      border-bottom: none;
+    }
+
+    .result-row .label {
+      color: #555;
+    }
+
+    .result-row .value {
+      font-weight: 700;
+      color: #2c5364;
+    }
+
+    .result-row .value.rate {
+      font-size: 1.2rem;
+      color: #16a085;
+    }
+
+    .history {
+      margin-top: 20px;
+      padding: 18px;
+      background: #f8fbfd;
+      border: 1px solid #d8e8ee;
+      border-radius: 12px;
+    }
+
+    .history h3 {
+      color: #2c5364;
+      font-size: 1rem;
+      margin: 0;
+    }
+
+    .history-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 12px;
+    }
+
+    .history-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .history-sort {
+      border: 1px solid #2c5364;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #2c5364;
+      background: #fff;
+      font-family: inherit;
+    }
+
+    .history-toggle {
+      background: #fff;
+      color: #2c5364;
+      border: 1px solid #2c5364;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .history.collapsed .history-list,
+    .history.collapsed .history-empty,
+    .history.collapsed .history-summary,
+    .history.collapsed #clearHistoryBtn {
+      display: none;
+    }
+
+    .history-list {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+      max-height: 360px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .history-item {
+      border: 1px solid #d8e8ee;
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .history-item-title {
+      color: #203a43;
+      font-weight: 700;
+      font-size: 0.92rem;
+      margin-bottom: 4px;
+    }
+
+    .history-item-title-input {
+      width: 100%;
+      border: 1px solid #d8e8ee;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #203a43;
+      margin-bottom: 6px;
+      font-family: inherit;
+    }
+
+    .history-item-meta {
+      color: #666;
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+    }
+
+    .history-item-data {
+      display: grid;
+      gap: 6px;
+      margin-top: 6px;
+      margin-bottom: 4px;
+      color: #2c5364;
+      font-size: 0.84rem;
+    }
+
+    .history-item-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px dashed #e1edf2;
+      padding-bottom: 4px;
+    }
+
+    .history-item-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .history-item-label {
+      color: #60727a;
+      font-weight: 600;
+    }
+
+    .history-item-value {
+      color: #2c5364;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .history-rate {
+      background: #e9f8f3;
+      color: #0f7d61;
+      border: 1px solid #bfeadf;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-weight: 700;
+    }
+
+    .history-item-note {
+      width: 100%;
+      margin-top: 8px;
+      border: 1px solid #d8e8ee;
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 0.84rem;
+      resize: vertical;
+      min-height: 58px;
+      font-family: inherit;
+    }
+
+    .history-item-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    .history-item-qty {
+      width: 78px;
+      border: 1px solid #2c5364;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.78rem;
+      margin-right: 8px;
+      color: #2c5364;
+      font-weight: 600;
+    }
+
+    .history-item-amount {
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .history-item-delete {
+      border: 1px solid #e74c3c;
+      color: #e74c3c;
+      background: #fff;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .history-item-order {
+      border: 1px solid #2c5364;
+      color: #2c5364;
+      background: #fff;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 6px;
+    }
+
+    .history-empty {
+      color: #666;
+      font-size: 0.85rem;
+    }
+
+    .history-summary {
+      margin-top: 12px;
+      border: 1px solid #d8e8ee;
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .history-summary-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #2c5364;
+      background: #f1f7fa;
+      border-bottom: 1px solid #d8e8ee;
+    }
+
+    .history-summary-toggle {
+      border: 1px solid #2c5364;
+      background: #fff;
+      color: #2c5364;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .history-summary.collapsed .history-summary-scroll {
+      display: none;
+    }
+
+    .history-summary-scroll {
+      overflow: visible;
+      max-height: none;
+    }
+
+    .history-summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+      table-layout: fixed;
+    }
+
+    .history-summary-table th,
+    .history-summary-table td {
+      border-bottom: 1px solid #e8f0f4;
+      padding: 6px 5px;
+      text-align: left;
+      white-space: normal;
+      word-break: break-word;
+      color: #2c5364;
+    }
+
+    .history-summary-table th:nth-child(1),
+    .history-summary-table td:nth-child(1) {
+      width: 22%;
+    }
+
+    .history-summary-table th:nth-child(2),
+    .history-summary-table td:nth-child(2),
+    .history-summary-table th:nth-child(3),
+    .history-summary-table td:nth-child(3) {
+      width: 15%;
+    }
+
+    .history-summary-table th:nth-child(4),
+    .history-summary-table td:nth-child(4) {
+      width: 12%;
+    }
+
+    .history-summary-table th:nth-child(5),
+    .history-summary-table td:nth-child(5),
+    .history-summary-table th:nth-child(6),
+    .history-summary-table td:nth-child(6) {
+      width: 14%;
+    }
+
+    .history-summary-table th:nth-child(7),
+    .history-summary-table td:nth-child(7) {
+      width: 8%;
+    }
+
+    .history-summary-note {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.2;
+      max-height: 2.4em;
+    }
+
+    .history-summary-table th {
+      position: sticky;
+      top: 0;
+      background: #f8fbfd;
+      z-index: 1;
+      font-weight: 700;
+    }
+
+    .history-summary-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <h1>Simple Interest Rate Calculator</h1>
+    <p class="subtitle">Find the annual interest rate from your investment details</p>
+
+    <div class="form-group">
+      <label for="principal">Principal Amount (₹)</label>
+      <input type="number" id="principal" placeholder="100000" min="0" step="any" />
+    </div>
+
+    <div class="form-group">
+      <label for="maturity">Maturity Amount (₹)</label>
+      <input type="number" id="maturity" placeholder="115000" min="0" step="any" />
+    </div>
+
+    <div class="form-group">
+      <label for="quantity">Quantity (Multiplier)</label>
+      <input type="number" id="quantity" value="1" min="1" step="1" />
+    </div>
+
+    <div class="date-row">
+      <div class="form-group">
+        <label for="startDate">Start Date</label>
+        <div class="date-inputs">
+          <input type="date" id="startDate" />
+          <input type="text" id="startDateText" placeholder="Or paste date: YYYY-MM-DD or DD/MM/YYYY" inputmode="numeric" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="endDate">End Date</label>
+        <div class="date-inputs">
+          <input type="date" id="endDate" />
+          <input type="text" id="endDateText" placeholder="Or paste date: YYYY-MM-DD or DD/MM/YYYY" inputmode="numeric" />
+        </div>
+      </div>
+    </div>
+    <p class="date-hint">Use calendar picker or paste date in the text box.</p>
+
+    <div class="form-group">
+      <label for="noteName">Note Name (optional)</label>
+      <input type="text" id="noteName" placeholder="e.g. My Notes" />
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <button class="btn" id="calcBtn">Calculate Interest Rate</button>
+
+    <div class="history" id="historySection">
+      <div class="history-head">
+        <h3>Session Notes</h3>
+        <div class="history-controls">
+          <select class="history-sort" id="historySort" aria-label="Sort notes">
+            <option value="manual">Sort: Manual</option>
+            <option value="rate-desc">Sort: SI Rate (High → Low)</option>
+            <option value="rate-asc">Sort: SI Rate (Low → High)</option>
+          </select>
+          <button class="history-toggle" id="toggleHistoryBtn" type="button">Hide</button>
+        </div>
+      </div>
+      <ul class="history-list" id="historyList"></ul>
+      <p class="history-empty" id="historyEmpty">No saved calculations yet.</p>
+      <button class="btn secondary" id="clearHistoryBtn" type="button">Clear Session History</button>
+      <div class="history-summary" id="historySummary">
+        <div class="history-summary-head">
+          <span>Notes Summary</span>
+          <button class="history-summary-toggle" id="summaryToggleBtn" type="button">Hide</button>
+        </div>
+        <div class="history-summary-scroll">
+          <table class="history-summary-table">
+            <thead>
+              <tr>
+                <th>Note</th>
+                <th>Principal</th>
+                <th>Maturity</th>
+                <th>SI Rate</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Duration</th>
+              </tr>
+            </thead>
+            <tbody id="historySummaryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="results" id="results">
+      <h2>Results</h2>
+      <div class="result-row">
+        <span class="label">Principal (P)</span>
+        <span class="value" id="resPrincipal">—</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Maturity Amount (A)</span>
+        <span class="value" id="resMaturity">—</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Interest Earned</span>
+        <span class="value" id="resInterest">—</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Quantity</span>
+        <span class="value" id="resQuantity">—</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Duration</span>
+        <span class="value" id="resDuration">—</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Annual Interest Rate</span>
+        <span class="value rate" id="resRate">—</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const inrFormatter = new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+    const inrFormatterNoDecimals = new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
+
+    const formatCurrency = (n) => inrFormatter.format(n);
+    const formatCurrencyNoDecimals = (n) => inrFormatterNoDecimals.format(n);
+    const HISTORY_KEY = 'simple-interest-history-v1';
+    const HISTORY_SORT_KEY = 'simple-interest-history-sort-v1';
+
+    function parseCurrencyText(value) {
+      if (typeof value === 'number') return value;
+      if (!value) return 0;
+      const cleaned = String(value).replace(/[^\d.-]/g, '');
+      const parsed = Number(cleaned);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function sanitizeQuantity(value) {
+      const quantity = Math.floor(Number(value));
+      return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+    }
+
+    function formatInputNumber(value) {
+      if (!Number.isFinite(value)) return '';
+      return String(Number(value.toFixed(6)));
+    }
+
+    function computeScaledAmounts(basePrincipal, baseMaturity, quantity) {
+      const qty = sanitizeQuantity(quantity);
+      return {
+        quantity: qty,
+        principal: basePrincipal * qty,
+        maturity: baseMaturity * qty
+      };
+    }
+
+    function parseRatePercent(value) {
+      if (!value) return NaN;
+      const cleaned = String(value).replace(/[^\d.-]/g, '');
+      const parsed = Number(cleaned);
+      return Number.isFinite(parsed) ? parsed : NaN;
+    }
+
+    function getMonthlyInterestAmount(principalAmount, rateText) {
+      const ratePercent = parseRatePercent(rateText);
+      if (!Number.isFinite(principalAmount) || principalAmount <= 0 || !Number.isFinite(ratePercent)) {
+        return null;
+      }
+      const rateDecimal = ratePercent / 100;
+      return (principalAmount * rateDecimal) / 12;
+    }
+
+    function getHistorySortMode() {
+      const mode = localStorage.getItem(HISTORY_SORT_KEY) || 'manual';
+      if (mode === 'rate-desc' || mode === 'rate-asc' || mode === 'manual') return mode;
+      return 'manual';
+    }
+
+    function setHistorySortMode(mode) {
+      localStorage.setItem(HISTORY_SORT_KEY, mode);
+    }
+
+    function parseSortableRate(rateText) {
+      const parsed = parseRatePercent(rateText);
+      return Number.isFinite(parsed) ? parsed : Number.NaN;
+    }
+
+    function sortHistoryEntries(entries, mode) {
+      if (mode === 'manual') return entries;
+
+      const sorted = [...entries];
+      sorted.sort((a, b) => {
+        const rateA = parseSortableRate(a.rate);
+        const rateB = parseSortableRate(b.rate);
+        const aIsInvalid = Number.isNaN(rateA);
+        const bIsInvalid = Number.isNaN(rateB);
+
+        if (aIsInvalid && bIsInvalid) return 0;
+        if (aIsInvalid) return 1;
+        if (bIsInvalid) return -1;
+
+        return mode === 'rate-desc' ? rateB - rateA : rateA - rateB;
+      });
+
+      return sorted;
+    }
+
+    function migrateSessionHistoryToLocal() {
+      const localExists = localStorage.getItem(HISTORY_KEY);
+      if (localExists) return;
+
+      const sessionData = sessionStorage.getItem(HISTORY_KEY);
+      if (sessionData) {
+        localStorage.setItem(HISTORY_KEY, sessionData);
+      }
+    }
+
+    function daysBetween(d1, d2) {
+      const ms = d2.getTime() - d1.getTime();
+      return ms / (1000 * 60 * 60 * 24);
+    }
+
+    function createValidDate(year, month, day) {
+      const date = new Date(year, month - 1, day);
+      if (
+        date.getFullYear() !== year ||
+        date.getMonth() !== month - 1 ||
+        date.getDate() !== day
+      ) {
+        return null;
+      }
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
+
+    function parseDateInput(value) {
+      const input = value.trim();
+      if (!input) return null;
+
+      let match = input.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (match) {
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const day = Number(match[3]);
+        return createValidDate(year, month, day);
+      }
+
+      match = input.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+      if (match) {
+        const day = Number(match[1]);
+        const month = Number(match[2]);
+        const year = Number(match[3]);
+        return createValidDate(year, month, day);
+      }
+
+      return null;
+    }
+
+    function parseStoredNoteDate(value) {
+      const input = String(value || '').trim();
+      if (!input || input === '—') return null;
+
+      const parsedStandard = parseDateInput(input);
+      if (parsedStandard) return parsedStandard;
+
+      const monthMatch = input.match(/^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})$/);
+      if (monthMatch) {
+        const day = Number(monthMatch[1]);
+        const monthNames = {
+          jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+          jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+        };
+        const month = monthNames[monthMatch[2].slice(0, 3).toLowerCase()];
+        const year = Number(monthMatch[3]);
+        if (month) {
+          return createValidDate(year, month, day);
+        }
+      }
+
+      const native = new Date(input);
+      if (!Number.isNaN(native.getTime())) {
+        native.setHours(0, 0, 0, 0);
+        return native;
+      }
+
+      return null;
+    }
+
+    function toIsoDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function getDateRawValue(dateId, textId) {
+      const textValue = $(textId).value.trim();
+      if (textValue) return textValue;
+      return $(dateId).value.trim();
+    }
+
+    function markDateError(dateId, textId) {
+      $(dateId).classList.add('error');
+      $(textId).classList.add('error');
+    }
+
+    function setupDateSync(dateId, textId) {
+      const dateInput = $(dateId);
+      const textInput = $(textId);
+
+      dateInput.addEventListener('change', () => {
+        if (dateInput.value) {
+          textInput.value = dateInput.value;
+        }
+      });
+
+      textInput.addEventListener('blur', () => {
+        const parsed = parseDateInput(textInput.value);
+        if (parsed) {
+          dateInput.value = toIsoDate(parsed);
+        }
+      });
+    }
+
+    setupDateSync('startDate', 'startDateText');
+    setupDateSync('endDate', 'endDateText');
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed.map((entry) => {
+          const quantity = sanitizeQuantity(entry.quantity);
+          const basePrincipal = Number.isFinite(entry.basePrincipal) ? entry.basePrincipal : parseCurrencyText(entry.principal);
+          const baseMaturity = Number.isFinite(entry.baseMaturity) ? entry.baseMaturity : parseCurrencyText(entry.maturity);
+
+          const startDateObj = parseStoredNoteDate(entry.rawStartDate || entry.startDate);
+          const endDateObj = parseStoredNoteDate(entry.rawEndDate || entry.endDate);
+          const rawStartDate = startDateObj ? toIsoDate(startDateObj) : '';
+          const rawEndDate = endDateObj ? toIsoDate(endDateObj) : '';
+
+          const scaled = computeScaledAmounts(basePrincipal, baseMaturity, quantity);
+          let duration = entry.duration || '—';
+          let rate = entry.rate || '—';
+
+          if (startDateObj && endDateObj) {
+            const days = daysBetween(startDateObj, endDateObj);
+            if (days > 0 && scaled.maturity >= scaled.principal) {
+              const years = days / 365;
+              const ratePct = (((scaled.maturity / scaled.principal) - 1) / years) * 100;
+              duration = durationText(days);
+              rate = ratePct.toFixed(4) + ' %';
+            }
+          }
+
+          return {
+            ...entry,
+            id: entry.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            basePrincipal,
+            baseMaturity,
+            quantity,
+            rawStartDate,
+            rawEndDate,
+            startDate: startDateObj ? formatDateForNote(startDateObj) : (entry.startDate || '—'),
+            endDate: endDateObj ? formatDateForNote(endDateObj) : (entry.endDate || '—'),
+            duration,
+            rate,
+            noteText: entry.noteText || ''
+          };
+        });
+      } catch {
+        return [];
+      }
+    }
+
+    function saveHistory(entries) {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
+    }
+
+    function createHistoryRow(label, value, options = {}) {
+      const row = document.createElement('div');
+      row.className = 'history-item-row';
+
+      const labelEl = document.createElement('span');
+      labelEl.className = 'history-item-label';
+      labelEl.textContent = label;
+
+      const valueEl = document.createElement('span');
+      valueEl.className = `history-item-value${options.highlight ? ' history-rate' : ''}`;
+      if (value instanceof Node) {
+        valueEl.appendChild(value);
+      } else {
+        valueEl.textContent = value;
+      }
+
+      row.appendChild(labelEl);
+      row.appendChild(valueEl);
+      return row;
+    }
+
+    function renderHistory() {
+      const historyList = $('historyList');
+      const historyEmpty = $('historyEmpty');
+      const historySummary = $('historySummary');
+      const historySummaryBody = $('historySummaryBody');
+      const entries = loadHistory();
+      const sortMode = getHistorySortMode();
+      const displayEntries = sortHistoryEntries(entries, sortMode);
+
+      saveHistory(entries);
+
+      historyList.innerHTML = '';
+      historySummaryBody.innerHTML = '';
+
+      if (!displayEntries.length) {
+        historyEmpty.style.display = 'block';
+        historySummary.style.display = 'none';
+        return;
+      }
+
+      historyEmpty.style.display = 'none';
+      historySummary.style.display = 'block';
+
+      displayEntries.forEach((entry, index) => {
+        const scaled = computeScaledAmounts(entry.basePrincipal, entry.baseMaturity, entry.quantity);
+        const monthlyInterest = getMonthlyInterestAmount(scaled.principal, entry.rate);
+
+        const item = document.createElement('li');
+        item.className = 'history-item';
+
+        const titleEl = document.createElement('input');
+        titleEl.type = 'text';
+        titleEl.className = 'history-item-title-input';
+        titleEl.value = entry.noteName;
+        titleEl.addEventListener('blur', () => {
+          renameHistoryEntry(entry.id, titleEl.value);
+        });
+
+        const metaEl = document.createElement('div');
+        metaEl.className = 'history-item-meta';
+        metaEl.textContent = entry.savedAt;
+
+        const dataEl = document.createElement('div');
+        dataEl.className = 'history-item-data';
+
+        const principalInput = document.createElement('input');
+        principalInput.type = 'number';
+        principalInput.className = 'history-item-qty history-item-amount';
+        principalInput.min = '0';
+        principalInput.step = 'any';
+        principalInput.style.width = '140px';
+        principalInput.style.marginRight = '0';
+        principalInput.value = formatInputNumber(scaled.principal);
+
+        const maturityInput = document.createElement('input');
+        maturityInput.type = 'number';
+        maturityInput.className = 'history-item-qty history-item-amount';
+        maturityInput.min = '0';
+        maturityInput.step = 'any';
+        maturityInput.style.width = '140px';
+        maturityInput.style.marginRight = '0';
+        maturityInput.value = formatInputNumber(scaled.maturity);
+
+        const startDateInput = document.createElement('input');
+        startDateInput.type = 'date';
+        startDateInput.className = 'history-item-qty';
+        startDateInput.style.width = '140px';
+        startDateInput.style.marginRight = '0';
+        startDateInput.value = entry.rawStartDate || '';
+
+        const endDateInput = document.createElement('input');
+        endDateInput.type = 'date';
+        endDateInput.className = 'history-item-qty';
+        endDateInput.style.width = '140px';
+        endDateInput.style.marginRight = '0';
+        endDateInput.value = entry.rawEndDate || '';
+
+        startDateInput.addEventListener('change', () => {
+          updateHistoryDates(entry.id, startDateInput.value, endDateInput.value);
+        });
+
+        endDateInput.addEventListener('change', () => {
+          updateHistoryDates(entry.id, startDateInput.value, endDateInput.value);
+        });
+
+        principalInput.addEventListener('blur', () => {
+          updateHistoryAmounts(entry.id, principalInput.value, maturityInput.value);
+        });
+
+        maturityInput.addEventListener('blur', () => {
+          updateHistoryAmounts(entry.id, principalInput.value, maturityInput.value);
+        });
+
+        principalInput.addEventListener('change', () => {
+          updateHistoryAmounts(entry.id, principalInput.value, maturityInput.value);
+        });
+
+        maturityInput.addEventListener('change', () => {
+          updateHistoryAmounts(entry.id, principalInput.value, maturityInput.value);
+        });
+
+        dataEl.appendChild(createHistoryRow('Principal', principalInput));
+        dataEl.appendChild(createHistoryRow('Maturity', maturityInput));
+        dataEl.appendChild(createHistoryRow('Quantity', `x ${scaled.quantity}`));
+        dataEl.appendChild(createHistoryRow('Start Date', startDateInput));
+        dataEl.appendChild(createHistoryRow('End Date', endDateInput));
+        dataEl.appendChild(createHistoryRow('Duration', entry.duration));
+        dataEl.appendChild(createHistoryRow('Simple Interest Rate', entry.rate, { highlight: true }));
+        dataEl.appendChild(createHistoryRow('Monthly Interest (Approx.)', monthlyInterest !== null ? formatCurrency(monthlyInterest) : '—'));
+
+        const noteTextEl = document.createElement('textarea');
+        noteTextEl.className = 'history-item-note';
+        noteTextEl.rows = 2;
+        noteTextEl.placeholder = 'Add details for this note...';
+        noteTextEl.value = entry.noteText;
+        noteTextEl.addEventListener('blur', () => {
+          updateHistoryNoteText(entry.id, noteTextEl.value);
+        });
+
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'history-item-actions';
+
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.className = 'history-item-qty';
+        qtyInput.min = '1';
+        qtyInput.step = '1';
+        qtyInput.value = String(scaled.quantity);
+        qtyInput.title = 'Quantity';
+        qtyInput.addEventListener('blur', () => {
+          updateHistoryQuantity(entry.id, qtyInput.value);
+        });
+
+        const moveUpButton = document.createElement('button');
+        moveUpButton.type = 'button';
+        moveUpButton.className = 'history-item-order';
+        moveUpButton.textContent = '↑';
+        moveUpButton.title = 'Move up';
+        moveUpButton.disabled = sortMode !== 'manual' || index === 0;
+        moveUpButton.addEventListener('click', () => {
+          moveHistoryEntry(entry.id, 'up');
+        });
+
+        const moveDownButton = document.createElement('button');
+        moveDownButton.type = 'button';
+        moveDownButton.className = 'history-item-order';
+        moveDownButton.textContent = '↓';
+        moveDownButton.title = 'Move down';
+        moveDownButton.disabled = sortMode !== 'manual' || index === displayEntries.length - 1;
+        moveDownButton.addEventListener('click', () => {
+          moveHistoryEntry(entry.id, 'down');
+        });
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'history-item-delete';
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', () => {
+          deleteHistoryEntry(entry.id);
+        });
+
+        actionsEl.appendChild(qtyInput);
+        actionsEl.appendChild(moveUpButton);
+        actionsEl.appendChild(moveDownButton);
+        actionsEl.appendChild(deleteButton);
+
+        item.appendChild(titleEl);
+        item.appendChild(metaEl);
+        item.appendChild(dataEl);
+        item.appendChild(noteTextEl);
+        item.appendChild(actionsEl);
+        historyList.appendChild(item);
+
+        const summaryRow = document.createElement('tr');
+
+        const noteCell = document.createElement('td');
+        const noteText = document.createElement('div');
+        noteText.className = 'history-summary-note';
+        noteText.textContent = entry.noteName || 'Untitled note';
+        noteCell.appendChild(noteText);
+        summaryRow.appendChild(noteCell);
+
+        const principalCell = document.createElement('td');
+        principalCell.textContent = formatCurrencyNoDecimals(scaled.principal);
+        summaryRow.appendChild(principalCell);
+
+        const maturityCell = document.createElement('td');
+        maturityCell.textContent = formatCurrencyNoDecimals(scaled.maturity);
+        summaryRow.appendChild(maturityCell);
+
+        const rateCell = document.createElement('td');
+        const summaryRate = parseRatePercent(entry.rate);
+        rateCell.textContent = Number.isFinite(summaryRate) ? `${summaryRate.toFixed(2)}%` : '—';
+        summaryRow.appendChild(rateCell);
+
+        const startCell = document.createElement('td');
+        startCell.textContent = entry.startDate || '—';
+        summaryRow.appendChild(startCell);
+
+        const endCell = document.createElement('td');
+        endCell.textContent = entry.endDate || '—';
+        summaryRow.appendChild(endCell);
+
+        const durationCell = document.createElement('td');
+        const summaryStartDate = parseStoredNoteDate(entry.rawStartDate || entry.startDate);
+        const summaryEndDate = parseStoredNoteDate(entry.rawEndDate || entry.endDate);
+        const summaryDays = summaryStartDate && summaryEndDate ? daysBetween(summaryStartDate, summaryEndDate) : Number.NaN;
+        durationCell.textContent = durationCompact(summaryDays);
+        summaryRow.appendChild(durationCell);
+
+        historySummaryBody.appendChild(summaryRow);
+      });
+    }
+
+    function updateHistoryNoteText(entryId, noteText) {
+      const entries = loadHistory();
+      const target = entries.find((entry) => entry.id === entryId);
+      if (!target) return;
+      target.noteText = noteText.trim();
+      saveHistory(entries);
+    }
+
+    function renameHistoryEntry(entryId, noteName) {
+      const entries = loadHistory();
+      const target = entries.find((entry) => entry.id === entryId);
+      if (!target) return;
+      target.noteName = noteName.trim() || 'Untitled note';
+      saveHistory(entries);
+      renderHistory();
+    }
+
+    function updateHistoryQuantity(entryId, quantityValue) {
+      const entries = loadHistory();
+      const target = entries.find((entry) => entry.id === entryId);
+      if (!target) return;
+      target.quantity = sanitizeQuantity(quantityValue);
+      recalculateHistoryRate(target);
+      saveHistory(entries);
+      renderHistory();
+    }
+
+    function recalculateHistoryRate(entry) {
+      const scaled = computeScaledAmounts(entry.basePrincipal, entry.baseMaturity, entry.quantity);
+      const startDate = parseStoredNoteDate(entry.rawStartDate || entry.startDate);
+      const endDate = parseStoredNoteDate(entry.rawEndDate || entry.endDate);
+
+      entry.startDate = startDate ? formatDateForNote(startDate) : '—';
+      entry.endDate = endDate ? formatDateForNote(endDate) : '—';
+
+      if (!startDate || !endDate) {
+        entry.duration = '—';
+        entry.rate = '—';
+        return;
+      }
+
+      const days = daysBetween(startDate, endDate);
+      if (days <= 0 || scaled.maturity < scaled.principal) {
+        entry.duration = '—';
+        entry.rate = '—';
+        return;
+      }
+
+      const years = days / 365;
+      const rate = ((scaled.maturity / scaled.principal) - 1) / years;
+      entry.duration = durationText(days);
+      entry.rate = (rate * 100).toFixed(4) + ' %';
+    }
+
+    function updateHistoryDates(entryId, startDateValue, endDateValue) {
+      const entries = loadHistory();
+      const target = entries.find((entry) => entry.id === entryId);
+      if (!target) return;
+
+      target.rawStartDate = startDateValue || '';
+      target.rawEndDate = endDateValue || '';
+
+      recalculateHistoryRate(target);
+      saveHistory(entries);
+      renderHistory();
+    }
+
+    function updateHistoryAmounts(entryId, principalValue, maturityValue) {
+      const entries = loadHistory();
+      const target = entries.find((entry) => entry.id === entryId);
+      if (!target) return;
+
+      const quantity = sanitizeQuantity(target.quantity);
+      const principal = Number(principalValue);
+      const maturity = Number(maturityValue);
+
+      if (Number.isFinite(principal) && principal > 0) {
+        target.basePrincipal = principal / quantity;
+      }
+
+      if (Number.isFinite(maturity) && maturity > 0) {
+        target.baseMaturity = maturity / quantity;
+      }
+
+      recalculateHistoryRate(target);
+      saveHistory(entries);
+      renderHistory();
+    }
+
+    function moveHistoryEntry(entryId, direction) {
+      const entries = loadHistory();
+      const currentIndex = entries.findIndex((entry) => entry.id === entryId);
+      if (currentIndex === -1) return;
+
+      const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      if (targetIndex < 0 || targetIndex >= entries.length) return;
+
+      const [entry] = entries.splice(currentIndex, 1);
+      entries.splice(targetIndex, 0, entry);
+      saveHistory(entries);
+      renderHistory();
+    }
+
+    function deleteHistoryEntry(entryId) {
+      const entries = loadHistory().filter((entry) => entry.id !== entryId);
+      saveHistory(entries);
+      renderHistory();
+    }
+
+    function addHistoryEntry(data) {
+      const entries = loadHistory();
+      entries.unshift(data);
+      if (entries.length > 20) {
+        entries.length = 20;
+      }
+      saveHistory(entries);
+      renderHistory();
+    }
+
+    function setHistoryCollapsed(isCollapsed) {
+      const historySection = $('historySection');
+      const toggleButton = $('toggleHistoryBtn');
+
+      historySection.classList.toggle('collapsed', isCollapsed);
+      toggleButton.textContent = isCollapsed ? 'Show' : 'Hide';
+    }
+
+    function setSummaryCollapsed(isCollapsed) {
+      const summary = $('historySummary');
+      const toggle = $('summaryToggleBtn');
+      summary.classList.toggle('collapsed', isCollapsed);
+      toggle.textContent = isCollapsed ? 'Show' : 'Hide';
+    }
+
+    const todayIso = toIsoDate(new Date());
+    if (!$('startDate').value && !$('startDateText').value) {
+      $('startDate').value = todayIso;
+      $('startDateText').value = todayIso;
+    }
+
+    let previousQuantity = sanitizeQuantity($('quantity').value);
+    $('quantity').value = String(previousQuantity);
+
+    function syncAmountInputsWithQuantity(newQuantityRaw) {
+      const newQuantity = sanitizeQuantity(newQuantityRaw);
+      $('quantity').value = String(newQuantity);
+
+      const factor = newQuantity / previousQuantity;
+      const principalRaw = $('principal').value.trim();
+      const maturityRaw = $('maturity').value.trim();
+
+      if (principalRaw && !isNaN(Number(principalRaw))) {
+        const updatedPrincipal = Number(principalRaw) * factor;
+        $('principal').value = formatInputNumber(updatedPrincipal);
+      }
+
+      if (maturityRaw && !isNaN(Number(maturityRaw))) {
+        const updatedMaturity = Number(maturityRaw) * factor;
+        $('maturity').value = formatInputNumber(updatedMaturity);
+      }
+
+      previousQuantity = newQuantity;
+    }
+
+    $('quantity').addEventListener('change', () => {
+      syncAmountInputsWithQuantity($('quantity').value);
+    });
+
+    $('quantity').addEventListener('blur', () => {
+      syncAmountInputsWithQuantity($('quantity').value);
+    });
+
+    $('clearHistoryBtn').addEventListener('click', () => {
+      localStorage.removeItem(HISTORY_KEY);
+      sessionStorage.removeItem(HISTORY_KEY);
+      renderHistory();
+    });
+
+    $('toggleHistoryBtn').addEventListener('click', () => {
+      const collapsed = $('historySection').classList.contains('collapsed');
+      setHistoryCollapsed(!collapsed);
+    });
+
+    $('summaryToggleBtn').addEventListener('click', () => {
+      const collapsed = $('historySummary').classList.contains('collapsed');
+      setSummaryCollapsed(!collapsed);
+    });
+
+    $('historySort').addEventListener('change', () => {
+      setHistorySortMode($('historySort').value);
+      renderHistory();
+    });
+
+    $('historySort').value = getHistorySortMode();
+
+    migrateSessionHistoryToLocal();
+    renderHistory();
+    setHistoryCollapsed(true);
+
+    function durationText(days) {
+      const years  = Math.floor(days / 365);
+      const months = Math.floor((days % 365) / 30);
+      const d      = Math.round(days % 30);
+      const parts  = [];
+      if (years)  parts.push(`${years} yr${years > 1 ? 's' : ''}`);
+      if (months) parts.push(`${months} mo${months > 1 ? 's' : ''}`);
+      if (d || parts.length === 0) parts.push(`${d} day${d !== 1 ? 's' : ''}`);
+      return `${parts.join(', ')} (${Math.round(days)} days)`;
+    }
+
+    function durationCompact(days) {
+      if (!Number.isFinite(days) || days < 0) return '—';
+      const years = Math.floor(days / 365);
+      const months = Math.floor((days % 365) / 30);
+      const d = Math.round(days % 30);
+      return `${years}Y${months}M${d}D`;
+    }
+
+    function formatDateForNote(date) {
+      return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    $('calcBtn').addEventListener('click', () => {
+      // Clear previous
+      $('errorMsg').textContent = '';
+      $('results').classList.remove('show');
+      document.querySelectorAll('input.error').forEach((el) => el.classList.remove('error'));
+
+      const principal = parseFloat($('principal').value);
+      const maturity  = parseFloat($('maturity').value);
+      const quantityRaw = Number($('quantity').value);
+      const startStr  = getDateRawValue('startDate', 'startDateText');
+      const endStr    = getDateRawValue('endDate', 'endDateText');
+
+      // Validation
+      let errors = [];
+
+      if (isNaN(principal) || principal <= 0) {
+        errors.push('Principal must be a positive number.');
+        $('principal').classList.add('error');
+      }
+      if (isNaN(maturity) || maturity <= 0) {
+        errors.push('Maturity amount must be a positive number.');
+        $('maturity').classList.add('error');
+      }
+      if (!Number.isInteger(quantityRaw) || quantityRaw <= 0) {
+        errors.push('Quantity must be a positive whole number (1, 2, 3...).');
+        $('quantity').classList.add('error');
+      }
+      if (!startStr) {
+        errors.push('Please enter a start date.');
+        markDateError('startDate', 'startDateText');
+      }
+      if (!endStr) {
+        errors.push('Please enter an end date.');
+        markDateError('endDate', 'endDateText');
+      }
+
+      if (errors.length) {
+        $('errorMsg').textContent = errors[0];
+        return;
+      }
+
+      const startDate = parseDateInput(startStr);
+      const endDate   = parseDateInput(endStr);
+
+      if (!startDate) {
+        $('errorMsg').textContent = 'Start date format is invalid. Use YYYY-MM-DD or DD/MM/YYYY.';
+        markDateError('startDate', 'startDateText');
+        return;
+      }
+
+      if (!endDate) {
+        $('errorMsg').textContent = 'End date format is invalid. Use YYYY-MM-DD or DD/MM/YYYY.';
+        markDateError('endDate', 'endDateText');
+        return;
+      }
+
+      const days      = daysBetween(startDate, endDate);
+
+      if (days <= 0) {
+        $('errorMsg').textContent = 'End date must be after the start date.';
+        markDateError('endDate', 'endDateText');
+        return;
+      }
+
+      if (maturity < principal) {
+        $('errorMsg').textContent = 'Maturity amount should be ≥ principal for a positive rate.';
+        $('maturity').classList.add('error');
+        return;
+      }
+
+      const quantity = sanitizeQuantity(quantityRaw);
+
+      // Simple Interest: A = P(1 + r*t)  →  r = (A/P - 1) / t
+      const years = days / 365;
+      const rate  = ((maturity / principal) - 1) / years; // decimal
+      const ratePct = rate * 100;
+
+      // Display results
+      $('resPrincipal').textContent = formatCurrency(principal);
+      $('resMaturity').textContent  = formatCurrency(maturity);
+      $('resInterest').textContent  = formatCurrency(maturity - principal);
+      $('resQuantity').textContent  = `x ${quantity}`;
+      $('resDuration').textContent  = durationText(days);
+      $('resRate').textContent      = ratePct.toFixed(4) + ' %';
+
+      const noteInput = $('noteName').value.trim();
+      addHistoryEntry({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        noteName: noteInput || `Calculation ${new Date().toLocaleTimeString()}`,
+        savedAt: new Date().toLocaleString(),
+        basePrincipal: principal / quantity,
+        baseMaturity: maturity / quantity,
+        quantity,
+        principal: formatCurrency(principal),
+        maturity: formatCurrency(maturity),
+        rawStartDate: toIsoDate(startDate),
+        rawEndDate: toIsoDate(endDate),
+        startDate: formatDateForNote(startDate),
+        endDate: formatDateForNote(endDate),
+        duration: durationText(days),
+        noteText: '',
+        rate: ratePct.toFixed(4) + ' %'
+      });
+
+      $('results').classList.add('show');
+    });
+
+  </script>
+</body>
+</html>

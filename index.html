@@ -186,6 +186,9 @@
     }
 
     .history {
+      /* normally fill parent width */
+      width: 100%;
+      box-sizing: border-box;
       margin-top: 20px;
       padding: 18px;
       background: #f8fbfd;
@@ -260,6 +263,8 @@
       background: #fff;
       border-radius: 8px;
       padding: 10px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .history-item-title {
@@ -302,6 +307,7 @@
       gap: 10px;
       border-bottom: 1px dashed #e1edf2;
       padding-bottom: 4px;
+      flex-wrap: wrap;
     }
 
     .history-item-row:last-child {
@@ -500,6 +506,46 @@
 
     .history-summary-table tbody tr:last-child td {
       border-bottom: none;
+    }
+
+    /* mobile-specific layout adjustments */
+    @media (max-width: 550px) {
+      /* allow calculator padding to shrink */
+      .calculator {
+        padding: 20px;
+        max-width: 100vw;
+      }
+      /* make history panel stretch across the viewport
+         by neutralizing parent's padding */
+      .history {
+        width: calc(100vw - 40px); /* account for body padding */
+        margin-left: -20px;
+        margin-right: -20px;
+        padding: 18px 20px;
+      }
+      /* notes themselves already 100%, just ensure box-sizing
+         prevents any overflow from added padding */
+      .history-item {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      /* rows wrap on narrow screens */
+      .history-item-row {
+        flex-wrap: wrap;
+      }
+      /* shrink fonts slightly */
+      .history-item-title { font-size: 0.9rem; }
+      .history-item-data { font-size: 0.8rem; }
+      /* controls in header stack and stretch */
+      .history-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .history-controls {
+        width: 100%;
+        justify-content: space-between;
+      }
     }
   </style>
 </head>

@@ -481,10 +481,6 @@
       width: 14%;
     }
 
-    .history-summary-table th:nth-child(7),
-    .history-summary-table td:nth-child(7) {
-      width: 8%;
-    }
 
     .history-summary-note {
       display: -webkit-box;
@@ -626,7 +622,6 @@
                 <th>SI Rate</th>
                 <th>Start Date</th>
                 <th>End Date</th>
-                <th>Duration</th>
               </tr>
             </thead>
             <tbody id="historySummaryBody"></tbody>
@@ -1162,13 +1157,6 @@
         const endCell = document.createElement('td');
         endCell.textContent = entry.endDate || '—';
         summaryRow.appendChild(endCell);
-
-        const durationCell = document.createElement('td');
-        const summaryStartDate = parseStoredNoteDate(entry.rawStartDate || entry.startDate);
-        const summaryEndDate = parseStoredNoteDate(entry.rawEndDate || entry.endDate);
-        const summaryDays = summaryStartDate && summaryEndDate ? daysBetween(summaryStartDate, summaryEndDate) : Number.NaN;
-        durationCell.textContent = durationCompact(summaryDays);
-        summaryRow.appendChild(durationCell);
 
         historySummaryBody.appendChild(summaryRow);
       });

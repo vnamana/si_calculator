@@ -222,6 +222,10 @@
       color: #2c5364;
       background: #fff;
       font-family: inherit;
+      /* constrain width and allow shrinking so toggle button can sit beside */
+      max-width: 130px;
+      width: auto;
+      min-width: 0;
     }
 
     .history-toggle {
@@ -551,9 +555,9 @@
         <h3>Session Notes</h3>
         <div class="history-controls">
           <select class="history-sort" id="historySort" aria-label="Sort notes">
-            <option value="manual">Sort: Manual</option>
-            <option value="rate-desc">Sort: SI Rate (High → Low)</option>
-            <option value="rate-asc">Sort: SI Rate (Low → High)</option>
+            <option value="manual">Manual</option>
+            <option value="rate-desc">SI ↓</option>
+            <option value="rate-asc">SI ↑</option>
           </select>
           <button class="history-toggle" id="toggleHistoryBtn" type="button">Hide</button>
         </div>

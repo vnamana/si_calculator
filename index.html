@@ -8,6 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Interest Calc" />
+  <!-- Favicon (data URI to prevent 404) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%232c5364'>₹</text></svg>" />
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -695,6 +697,21 @@
 
   <script>
     // Firebase config
+    // ⚠️  NOTE: Firebase API keys are PUBLIC by design and CANNOT be truly secret in client-side apps.
+    // Security is enforced via:
+    //   1. Firestore Security Rules (restrict read/write access)
+    //   2. Firebase Console API Restrictions (restrict by HTTP referrer/domain)
+    //   3. Firebase Auth (authenticate users before allowing access)
+    // 
+    // If you redeploy or fork this project:
+    //   1. Create a new Firebase project
+    //   2. In Firebase Console > Project Settings > General:
+    //      - Note the Web API Key
+    //   3. In Firebase Console > Project Settings > API Keys:
+    //      - Click the key → Restrict APIs and referrers
+    //      - Set HTTP referrers: https://vnamana.github.io/si_calculator/* and http://127.0.0.1:*/*
+    //   4. Replace the configuration below with your new project values
+    
     const firebaseConfig = {
       apiKey: "AIzaSyCTKMCTjrnaBGsrSBKolmIXDuiAd-rXnEQ",
       authDomain: "si-calculator-49215.firebaseapp.com",
@@ -1347,8 +1364,8 @@
       }
     }
 
-    function moveHistoryEntry(entryId, direction) {
-      const entries = loadHistory();
+    async function moveHistoryEntry(entryId, direction) {
+      const entries = await loadHistory();
       const currentIndex = entries.findIndex((entry) => entry.id === entryId);
       if (currentIndex === -1) return;
 
@@ -1363,10 +1380,19 @@
 
     async function deleteHistoryEntry(entryId) {
       try {
-        await window.db.collection('history').doc(entryId).delete();
-        renderHistory();
+        if (!entryId) {
+          alert('Error: Cannot delete - invalid entry ID');
+          return;
+        }
+        const docRef = window.db.collection('history').doc(entryId);
+        await docRef.delete();
+        
+        // Longer delay to ensure replication
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await renderHistory();
       } catch (error) {
         console.error('Error deleting entry:', error);
+        alert(`Delete failed: ${error.message}`);
       }
     }
 
@@ -1438,7 +1464,10 @@
     $('clearHistoryBtn').addEventListener('click', async () => {
       if (confirm('Are you sure you want to clear all session history? This action cannot be undone.')) {
         try {
-          const querySnapshot = await window.db.collection('history').get();
+          if (!window.auth.currentUser) return;
+          const email = window.auth.currentUser.email;
+          // Only delete user's own documents
+          const querySnapshot = await window.db.collection('history').where('createdBy', '==', email).get();
           const deletePromises = [];
           querySnapshot.docs.forEach((doc) => {
             deletePromises.push(doc.ref.delete());
@@ -1689,7 +1718,10 @@
       if (currentCalcData) {
         const noteInput = $('noteName').value.trim();
         currentCalcData.noteName = noteInput || `Calculation ${new Date().toLocaleTimeString()}`;
-        addHistoryEntry(currentCalcData);
+        // Remove the fake ID before saving - Firestore will generate the real one
+        const dataToSave = { ...currentCalcData };
+        delete dataToSave.id;
+        addHistoryEntry(dataToSave);
         currentCalcData = null;
         $('saveCalcBtn').style.display = 'none';
       }

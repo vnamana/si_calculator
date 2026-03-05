@@ -657,6 +657,8 @@
         <span class="value rate" id="resRate">—</span>
       </div>
     </div>
+
+    <button class="btn secondary" id="saveCalcBtn" style="display:none;">Save as Note</button>
   </div>
 
   <script>
@@ -679,6 +681,7 @@
     const formatCurrency = (n) => inrFormatter.format(n);
     const formatCurrencyNoDecimals = (n) => inrFormatterNoDecimals.format(n);
     const HISTORY_KEY = 'simple-interest-history-v1';
+    let currentCalcData = null;
     const HISTORY_SORT_KEY = 'simple-interest-history-sort-v1';
 
     function parseCurrencyText(value) {
@@ -1335,9 +1338,11 @@
     });
 
     $('clearHistoryBtn').addEventListener('click', () => {
-      localStorage.removeItem(HISTORY_KEY);
-      sessionStorage.removeItem(HISTORY_KEY);
-      renderHistory();
+      if (confirm('Are you sure you want to clear all session history? This action cannot be undone.')) {
+        localStorage.removeItem(HISTORY_KEY);
+        sessionStorage.removeItem(HISTORY_KEY);
+        renderHistory();
+      }
     });
 
     $('toggleHistoryBtn').addEventListener('click', () => {
@@ -1392,6 +1397,8 @@
       // Clear previous
       $('errorMsg').textContent = '';
       $('results').classList.remove('show');
+      $('saveCalcBtn').style.display = 'none';
+      currentCalcData = null;
       document.querySelectorAll('input.error').forEach((el) => el.classList.remove('error'));
 
       const principal = parseFloat($('principal').value);
@@ -1474,7 +1481,7 @@
       $('resRate').textContent      = ratePct.toFixed(4) + ' %';
 
       const noteInput = $('noteName').value.trim();
-      addHistoryEntry({
+      currentCalcData = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         noteName: noteInput || `Calculation ${new Date().toLocaleTimeString()}`,
         savedAt: new Date().toLocaleString(),
@@ -1490,9 +1497,20 @@
         duration: durationText(days),
         noteText: '',
         rate: ratePct.toFixed(4) + ' %'
-      });
+      };
 
       $('results').classList.add('show');
+      $('saveCalcBtn').style.display = 'block';
+    });
+
+    $('saveCalcBtn').addEventListener('click', () => {
+      if (currentCalcData) {
+        const noteInput = $('noteName').value.trim();
+        currentCalcData.noteName = noteInput || `Calculation ${new Date().toLocaleTimeString()}`;
+        addHistoryEntry(currentCalcData);
+        currentCalcData = null;
+        $('saveCalcBtn').style.display = 'none';
+      }
     });
 
   </script>

@@ -8,6 +8,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Interest Calc" />
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <style>
     * {
       margin: 0;
@@ -23,6 +27,17 @@
       justify-content: center;
       background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
       padding: 20px;
+    }
+
+    #authSection {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      width: 100%;
+      max-width: 560px;
+      text-align: center;
+      margin-bottom: 20px;
     }
 
     .calculator {
@@ -552,8 +567,19 @@
   </style>
 </head>
 <body>
-  <div class="calculator">
+  <div id="authSection">
+    <h1>Sign in to continue</h1>
+    <div class="form-group">
+      <label for="emailInput">Email address</label>
+      <input type="email" id="emailInput" placeholder="you@example.com" />
+    </div>
+    <button class="btn" id="sendLinkBtn">Send sign-in link</button>
+    <p id="authMessage" style="margin-top:12px;font-size:0.9rem;color:#555;"></p>
+  </div>
+
+  <div class="calculator" style="display:none;">
     <h1>Simple Interest Rate Calculator</h1>
+    <button id="signOutBtn" class="btn secondary" style="display:none; margin-top:0; margin-bottom:16px;">Sign out</button>
     <p class="subtitle">Find the annual interest rate from your investment details</p>
 
     <div class="form-group">
@@ -663,9 +689,34 @@
         <span class="value rate" id="resRate">—</span>
       </div>
     </div>
+
+    <button class="btn secondary" id="saveCalcBtn" style="display:none;">Save as Note</button>
   </div>
 
   <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCTKMCTjrnaBGsrSBKolmIXDuiAd-rXnEQ",
+      authDomain: "si-calculator-49215.firebaseapp.com",
+      projectId: "si-calculator-49215",
+      storageBucket: "si-calculator-49215.firebasestorage.app",
+      messagingSenderId: "388606784094",
+      appId: "1:388606784094:web:871353344cd28848cc3acf",
+      measurementId: "G-FR4B4DBSTZ"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore(app);
+    const auth = firebase.auth(app);
+
+    // Set persistence to local for long-term sign-in
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+    // expose globals
+    window.db = db;
+    window.auth = auth;
+
     const $ = (id) => document.getElementById(id);
 
     const inrFormatter = new Intl.NumberFormat('en-IN', {
@@ -685,6 +736,7 @@
     const formatCurrency = (n) => inrFormatter.format(n);
     const formatCurrencyNoDecimals = (n) => inrFormatterNoDecimals.format(n);
     const HISTORY_KEY = 'simple-interest-history-v1';
+    let currentCalcData = null;
     const HISTORY_SORT_KEY = 'simple-interest-history-sort-v1';
 
     function parseCurrencyText(value) {
@@ -885,14 +937,18 @@
     setupDateSync('startDate', 'startDateText');
     setupDateSync('endDate', 'endDateText');
 
-    function loadHistory() {
+    async function loadHistory() {
       try {
-        const raw = localStorage.getItem(HISTORY_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return [];
-
-        return parsed.map((entry) => {
+        if (!window.auth.currentUser) return [];
+        const email = window.auth.currentUser.email;
+        // only load notes created by the signed‑in user
+        const q = window.db.collection('history').where('createdBy', '==', email).orderBy('savedAt', 'desc');
+        const querySnapshot = await q.get();
+        const entries = [];
+        querySnapshot.docs.forEach((doc) => {
+          entries.push({ id: doc.id, ...doc.data() });
+        });
+        return entries.map((entry) => {
           const quantity = sanitizeQuantity(entry.quantity);
           const basePrincipal = Number.isFinite(entry.basePrincipal) ? entry.basePrincipal : parseCurrencyText(entry.principal);
           const baseMaturity = Number.isFinite(entry.baseMaturity) ? entry.baseMaturity : parseCurrencyText(entry.maturity);
@@ -918,7 +974,6 @@
 
           return {
             ...entry,
-            id: entry.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             basePrincipal,
             baseMaturity,
             quantity,
@@ -931,13 +986,15 @@
             noteText: entry.noteText || ''
           };
         });
-      } catch {
+      } catch (error) {
+        console.error('Error loading history:', error);
         return [];
       }
     }
 
-    function saveHistory(entries) {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
+    async function saveHistory(entries) {
+      // Since Firestore is used, this function is not needed for saving all, but for updates we use updateDoc
+      // For now, leave it as is, but since we load from Firestore, we don't save all back.
     }
 
     function createHistoryRow(label, value, options = {}) {
@@ -961,16 +1018,14 @@
       return row;
     }
 
-    function renderHistory() {
+    async function renderHistory() {
       const historyList = $('historyList');
       const historyEmpty = $('historyEmpty');
       const historySummary = $('historySummary');
       const historySummaryBody = $('historySummaryBody');
-      const entries = loadHistory();
+      const entries = await loadHistory();
       const sortMode = getHistorySortMode();
       const displayEntries = sortHistoryEntries(entries, sortMode);
-
-      saveHistory(entries);
 
       historyList.innerHTML = '';
       historySummaryBody.innerHTML = '';
@@ -1168,31 +1223,44 @@
       });
     }
 
-    function updateHistoryNoteText(entryId, noteText) {
-      const entries = loadHistory();
-      const target = entries.find((entry) => entry.id === entryId);
-      if (!target) return;
-      target.noteText = noteText.trim();
-      saveHistory(entries);
+    async function updateHistoryNoteText(entryId, noteText) {
+      try {
+        await window.db.collection('history').doc(entryId).update({ noteText: noteText.trim() });
+      } catch (error) {
+        console.error('Error updating note text:', error);
+      }
     }
 
-    function renameHistoryEntry(entryId, noteName) {
-      const entries = loadHistory();
-      const target = entries.find((entry) => entry.id === entryId);
-      if (!target) return;
-      target.noteName = noteName.trim() || 'Untitled note';
-      saveHistory(entries);
-      renderHistory();
+    async function renameHistoryEntry(entryId, noteName) {
+      try {
+        await window.db.collection('history').doc(entryId).update({ noteName: noteName.trim() || 'Untitled note' });
+        renderHistory();
+      } catch (error) {
+        console.error('Error renaming entry:', error);
+      }
     }
 
-    function updateHistoryQuantity(entryId, quantityValue) {
-      const entries = loadHistory();
-      const target = entries.find((entry) => entry.id === entryId);
-      if (!target) return;
-      target.quantity = sanitizeQuantity(quantityValue);
-      recalculateHistoryRate(target);
-      saveHistory(entries);
-      renderHistory();
+    async function updateHistoryQuantity(entryId, quantityValue) {
+      try {
+        const quantity = sanitizeQuantity(quantityValue);
+        const scaled = computeScaledAmounts(0, 0, quantity); // Wait, need base values
+        // Actually, need to load the entry first
+        const entries = await loadHistory();
+        const target = entries.find((entry) => entry.id === entryId);
+        if (!target) return;
+        target.quantity = quantity;
+        recalculateHistoryRate(target);
+        await window.db.collection('history').doc(entryId).update({
+          quantity: target.quantity,
+          startDate: target.startDate,
+          endDate: target.endDate,
+          duration: target.duration,
+          rate: target.rate
+        });
+        renderHistory();
+      } catch (error) {
+        console.error('Error updating quantity:', error);
+      }
     }
 
     function recalculateHistoryRate(entry) {
@@ -1222,39 +1290,61 @@
       entry.rate = (rate * 100).toFixed(4) + ' %';
     }
 
-    function updateHistoryDates(entryId, startDateValue, endDateValue) {
-      const entries = loadHistory();
-      const target = entries.find((entry) => entry.id === entryId);
-      if (!target) return;
+    async function updateHistoryDates(entryId, startDateValue, endDateValue) {
+      try {
+        const entries = await loadHistory();
+        const target = entries.find((entry) => entry.id === entryId);
+        if (!target) return;
 
-      target.rawStartDate = startDateValue || '';
-      target.rawEndDate = endDateValue || '';
+        target.rawStartDate = startDateValue || '';
+        target.rawEndDate = endDateValue || '';
 
-      recalculateHistoryRate(target);
-      saveHistory(entries);
-      renderHistory();
+        recalculateHistoryRate(target);
+        await window.db.collection('history').doc(entryId).update({
+          rawStartDate: target.rawStartDate,
+          rawEndDate: target.rawEndDate,
+          startDate: target.startDate,
+          endDate: target.endDate,
+          duration: target.duration,
+          rate: target.rate
+        });
+        renderHistory();
+      } catch (error) {
+        console.error('Error updating dates:', error);
+      }
     }
 
-    function updateHistoryAmounts(entryId, principalValue, maturityValue) {
-      const entries = loadHistory();
-      const target = entries.find((entry) => entry.id === entryId);
-      if (!target) return;
+    async function updateHistoryAmounts(entryId, principalValue, maturityValue) {
+      try {
+        const entries = await loadHistory();
+        const target = entries.find((entry) => entry.id === entryId);
+        if (!target) return;
 
-      const quantity = sanitizeQuantity(target.quantity);
-      const principal = Number(principalValue);
-      const maturity = Number(maturityValue);
+        const quantity = sanitizeQuantity(target.quantity);
+        const principal = Number(principalValue);
+        const maturity = Number(maturityValue);
 
-      if (Number.isFinite(principal) && principal > 0) {
-        target.basePrincipal = principal / quantity;
+        if (Number.isFinite(principal) && principal > 0) {
+          target.basePrincipal = principal / quantity;
+        }
+
+        if (Number.isFinite(maturity) && maturity > 0) {
+          target.baseMaturity = maturity / quantity;
+        }
+
+        recalculateHistoryRate(target);
+        await window.db.collection('history').doc(entryId).update({
+          basePrincipal: target.basePrincipal,
+          baseMaturity: target.baseMaturity,
+          startDate: target.startDate,
+          endDate: target.endDate,
+          duration: target.duration,
+          rate: target.rate
+        });
+        renderHistory();
+      } catch (error) {
+        console.error('Error updating amounts:', error);
       }
-
-      if (Number.isFinite(maturity) && maturity > 0) {
-        target.baseMaturity = maturity / quantity;
-      }
-
-      recalculateHistoryRate(target);
-      saveHistory(entries);
-      renderHistory();
     }
 
     function moveHistoryEntry(entryId, direction) {
@@ -1271,20 +1361,25 @@
       renderHistory();
     }
 
-    function deleteHistoryEntry(entryId) {
-      const entries = loadHistory().filter((entry) => entry.id !== entryId);
-      saveHistory(entries);
-      renderHistory();
+    async function deleteHistoryEntry(entryId) {
+      try {
+        await window.db.collection('history').doc(entryId).delete();
+        renderHistory();
+      } catch (error) {
+        console.error('Error deleting entry:', error);
+      }
     }
 
-    function addHistoryEntry(data) {
-      const entries = loadHistory();
-      entries.unshift(data);
-      if (entries.length > 20) {
-        entries.length = 20;
+    async function addHistoryEntry(data) {
+      try {
+        if (window.auth.currentUser) {
+          data.createdBy = window.auth.currentUser.email;
+        }
+        await window.db.collection('history').add(data);
+        renderHistory();
+      } catch (error) {
+        console.error('Error adding history entry:', error);
       }
-      saveHistory(entries);
-      renderHistory();
     }
 
     function setHistoryCollapsed(isCollapsed) {
@@ -1340,10 +1435,20 @@
       syncAmountInputsWithQuantity($('quantity').value);
     });
 
-    $('clearHistoryBtn').addEventListener('click', () => {
-      localStorage.removeItem(HISTORY_KEY);
-      sessionStorage.removeItem(HISTORY_KEY);
-      renderHistory();
+    $('clearHistoryBtn').addEventListener('click', async () => {
+      if (confirm('Are you sure you want to clear all session history? This action cannot be undone.')) {
+        try {
+          const querySnapshot = await window.db.collection('history').get();
+          const deletePromises = [];
+          querySnapshot.docs.forEach((doc) => {
+            deletePromises.push(doc.ref.delete());
+          });
+          await Promise.all(deletePromises);
+          renderHistory();
+        } catch (error) {
+          console.error('Error clearing history:', error);
+        }
+      }
     });
 
     $('toggleHistoryBtn').addEventListener('click', () => {
@@ -1363,8 +1468,84 @@
 
     $('historySort').value = getHistorySortMode();
 
+    // Authentication helpers
+    function showCalculator() {
+      document.getElementById('authSection').style.display = 'none';
+      document.querySelector('.calculator').style.display = 'block';
+      renderHistory();
+    }
+
+    function showAuthUI(msg) {
+      document.getElementById('authSection').style.display = 'block';
+      document.querySelector('.calculator').style.display = 'none';
+      if (msg) document.getElementById('authMessage').textContent = msg;
+    }
+
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const actionCodeSettings = {
+      url: isLocal ? window.location.href : 'https://vnamana.github.io/si_calculator/',
+      handleCodeInApp: true,
+    };
+
+    document.getElementById('sendLinkBtn').addEventListener('click', () => {
+      const email = document.getElementById('emailInput').value.trim();
+      if (!email) {
+        showAuthUI('Please enter an email address.');
+        return;
+      }
+      window.auth.sendSignInLinkToEmail(email, actionCodeSettings)
+        .then(() => {
+          window.localStorage.setItem('emailForSignIn', email);
+          showAuthUI('A sign-in link has been sent. Check your inbox.');
+        })
+        .catch((err) => {
+          console.error('Error sending email link', err);
+          showAuthUI('Failed to send link. See console for details.');
+        });
+    });
+
+    // check for incoming email link
+    window.addEventListener('load', () => {
+      if (window.auth.isSignInWithEmailLink(window.location.href)) {
+        let email = window.localStorage.getItem('emailForSignIn');
+        if (!email) {
+          email = window.prompt('Please provide your email for confirmation');
+        }
+        window.auth.signInWithEmailLink(email, window.location.href)
+          .then(() => {
+            window.localStorage.removeItem('emailForSignIn');
+            showCalculator();
+          })
+          .catch((err) => {
+            console.error('Sign-in error', err);
+            showAuthUI('Sign-in failed. Please try again.');
+          });
+      }
+    });
+
+    window.auth.onAuthStateChanged((user) => {
+      const signOutBtn = document.getElementById('signOutBtn');
+      if (user) {
+        showCalculator();
+        if (signOutBtn) {
+          signOutBtn.style.display = 'block';
+        }
+      } else {
+        showAuthUI();
+        if (signOutBtn) {
+          signOutBtn.style.display = 'none';
+        }
+      }
+    });
+
+    document.getElementById('signOutBtn').addEventListener('click', () => {
+      window.auth.signOut();
+    });
+
     migrateSessionHistoryToLocal();
-    renderHistory();
+    (async () => {
+      await renderHistory();
+    })();
     setHistoryCollapsed(true);
 
     function durationText(days) {
@@ -1398,6 +1579,8 @@
       // Clear previous
       $('errorMsg').textContent = '';
       $('results').classList.remove('show');
+      $('saveCalcBtn').style.display = 'none';
+      currentCalcData = null;
       document.querySelectorAll('input.error').forEach((el) => el.classList.remove('error'));
 
       const principal = parseFloat($('principal').value);
@@ -1480,7 +1663,7 @@
       $('resRate').textContent      = ratePct.toFixed(4) + ' %';
 
       const noteInput = $('noteName').value.trim();
-      addHistoryEntry({
+      currentCalcData = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         noteName: noteInput || `Calculation ${new Date().toLocaleTimeString()}`,
         savedAt: new Date().toLocaleString(),
@@ -1496,9 +1679,20 @@
         duration: durationText(days),
         noteText: '',
         rate: ratePct.toFixed(4) + ' %'
-      });
+      };
 
       $('results').classList.add('show');
+      $('saveCalcBtn').style.display = 'block';
+    });
+
+    $('saveCalcBtn').addEventListener('click', () => {
+      if (currentCalcData) {
+        const noteInput = $('noteName').value.trim();
+        currentCalcData.noteName = noteInput || `Calculation ${new Date().toLocaleTimeString()}`;
+        addHistoryEntry(currentCalcData);
+        currentCalcData = null;
+        $('saveCalcBtn').style.display = 'none';
+      }
     });
 
   </script>

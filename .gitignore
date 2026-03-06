@@ -1,0 +1,7 @@
+# Local Firebase client config (do not commit real project values)
+firebase-config.js
+
+# Optional env files
+.env
+.env.*
+!.env.example

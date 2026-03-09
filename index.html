@@ -150,6 +150,17 @@
         border: 2px solid #2c5364;
       }
 
+      #clearHistoryBtn {
+        width: auto;
+        display: block;
+        padding: 6px 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 8px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
       .error-msg {
         color: #e74c3c;
         font-size: 0.85rem;
@@ -535,18 +546,81 @@
 
       /* mobile-specific layout adjustments */
       @media (max-width: 550px) {
+        body {
+          align-items: flex-start;
+          padding: 8px;
+        }
+
         /* allow calculator padding to shrink */
         .calculator {
-          padding: 20px;
+          padding: 12px;
           max-width: 100vw;
+          border-radius: 12px;
+        }
+
+        .calculator h1 {
+          font-size: 1.15rem;
+          margin-bottom: 4px;
+        }
+
+        .calculator p.subtitle {
+          display: none;
+        }
+
+        .form-group {
+          margin-bottom: 10px;
+        }
+
+        .form-group label {
+          margin-bottom: 4px;
+          font-size: 0.82rem;
+        }
+
+        .form-group input {
+          padding: 9px 10px;
+          font-size: 0.92rem;
+        }
+
+        .date-row {
+          gap: 10px;
+        }
+
+        .date-inputs {
+          gap: 6px;
+        }
+
+        .btn {
+          padding: 10px;
+          font-size: 0.95rem;
+        }
+
+        .btn.secondary {
+          margin-top: 8px;
+        }
+
+        #clearHistoryBtn {
+          padding: 5px 9px;
+          font-size: 0.76rem;
+          margin-top: 6px;
+        }
+
+        .error-msg {
+          min-height: 16px;
+          font-size: 0.8rem;
+        }
+
+        .results {
+          margin-top: 12px;
+          padding: 14px;
         }
         /* make history panel stretch across the viewport
          by neutralizing parent's padding */
         .history {
-          width: calc(100vw - 40px); /* account for body padding */
-          margin-left: -20px;
-          margin-right: -20px;
-          padding: 18px 20px;
+          width: calc(100vw - 16px); /* account for body padding */
+          margin-left: -12px;
+          margin-right: -12px;
+          margin-top: 12px;
+          padding: 12px;
         }
         /* notes themselves already 100%, just ensure box-sizing
          prevents any overflow from added padding */
@@ -577,9 +651,9 @@
         }
         /* make summary section span full screen width */
         .history-summary {
-          width: calc(100% + 40px);
-          margin-left: -20px;
-          margin-right: -20px;
+          width: calc(100% + 24px);
+          margin-left: -12px;
+          margin-right: -12px;
         }
       }
     </style>
@@ -607,10 +681,6 @@
       >
         Sign out
       </button>
-      <p class="subtitle">
-        Find the annual interest rate from your investment details
-      </p>
-
       <div class="form-group">
         <label for="principal">Principal Amount (₹)</label>
         <input
@@ -646,7 +716,7 @@
             <input
               type="text"
               id="startDateText"
-              placeholder="Or paste date: YYYY-MM-DD or DD/MM/YYYY"
+              placeholder="YYYY-MM-DD or DD/MM/YYYY"
               inputmode="numeric"
             />
           </div>
@@ -658,15 +728,29 @@
             <input
               type="text"
               id="endDateText"
-              placeholder="Or paste date: YYYY-MM-DD or DD/MM/YYYY"
+              placeholder="YYYY-MM-DD or DD/MM/YYYY"
               inputmode="numeric"
             />
           </div>
         </div>
       </div>
-      <p class="date-hint">
-        Use calendar picker or paste date in the text box.
-      </p>
+
+      <div class="date-row">
+        <div class="form-group">
+          <label for="interestDate">Interest Date</label>
+          <input type="date" id="interestDate" />
+        </div>
+        <div class="form-group">
+          <label for="interestAmountRs">Interest Amount (Rs)</label>
+          <input
+            type="number"
+            id="interestAmountRs"
+            placeholder="15000"
+            min="0"
+            step="any"
+          />
+        </div>
+      </div>
 
       <div class="form-group">
         <label for="noteName">Note Name (optional)</label>
@@ -700,7 +784,7 @@
           No saved calculations yet.
         </p>
         <button class="btn secondary" id="clearHistoryBtn" type="button">
-          Clear Session History
+          Delete All Notes
         </button>
         <div class="history-summary" id="historySummary">
           <div class="history-summary-head">
@@ -721,8 +805,8 @@
                   <th>Principal</th>
                   <th>Maturity</th>
                   <th>SI Rate</th>
-                  <th>Start Date</th>
-                  <th>End Date</th>
+                  <th>Interest Date</th>
+                  <th>Interest Amt (Rs)</th>
                 </tr>
               </thead>
               <tbody id="historySummaryBody"></tbody>
@@ -1067,6 +1151,20 @@
               baseMaturity,
               quantity,
             );
+            const parsedInterestDate = parseStoredNoteDate(
+              entry.rawInterestDate || entry.interestDate,
+            );
+            const rawInterestDate = parsedInterestDate
+              ? toIsoDate(parsedInterestDate)
+              : "";
+            const interestAmountRaw = String(
+              entry.interestAmountRs ?? "",
+            ).trim();
+            const parsedInterestAmount = Number(interestAmountRaw);
+            const hasInterestAmount =
+              interestAmountRaw !== "" &&
+              Number.isFinite(parsedInterestAmount) &&
+              parsedInterestAmount >= 0;
             let duration = entry.duration || "—";
             let rate = entry.rate || "—";
 
@@ -1088,12 +1186,17 @@
               quantity,
               rawStartDate,
               rawEndDate,
+              rawInterestDate,
               startDate: startDateObj
                 ? formatDateForNote(startDateObj)
                 : entry.startDate || "—",
               endDate: endDateObj
                 ? formatDateForNote(endDateObj)
                 : entry.endDate || "—",
+              interestDate: parsedInterestDate
+                ? formatDateForNote(parsedInterestDate)
+                : "—",
+              interestAmountRs: hasInterestAmount ? parsedInterestAmount : null,
               duration,
               rate,
               noteText: entry.noteText || "",
@@ -1213,6 +1316,22 @@
           endDateInput.style.marginRight = "0";
           endDateInput.value = entry.rawEndDate || "";
 
+          const interestDateInput = document.createElement("input");
+          interestDateInput.type = "date";
+          interestDateInput.className = "history-item-qty";
+          interestDateInput.style.width = "130px";
+          interestDateInput.style.marginRight = "0";
+          interestDateInput.value = entry.rawInterestDate || "";
+
+          const interestAmountInput = document.createElement("input");
+          interestAmountInput.type = "number";
+          interestAmountInput.className = "history-item-qty history-item-amount";
+          interestAmountInput.min = "0";
+          interestAmountInput.step = "any";
+          interestAmountInput.style.width = "140px";
+          interestAmountInput.style.marginRight = "0";
+          interestAmountInput.value = formatInputNumber(entry.interestAmountRs);
+
           startDateInput.addEventListener("change", () => {
             updateHistoryDates(
               entry.id,
@@ -1226,6 +1345,30 @@
               entry.id,
               startDateInput.value,
               endDateInput.value,
+            );
+          });
+
+          interestDateInput.addEventListener("change", () => {
+            updateHistoryInterestFields(
+              entry.id,
+              interestDateInput.value,
+              interestAmountInput.value,
+            );
+          });
+
+          interestAmountInput.addEventListener("change", () => {
+            updateHistoryInterestFields(
+              entry.id,
+              interestDateInput.value,
+              interestAmountInput.value,
+            );
+          });
+
+          interestAmountInput.addEventListener("blur", () => {
+            updateHistoryInterestFields(
+              entry.id,
+              interestDateInput.value,
+              interestAmountInput.value,
             );
           });
 
@@ -1268,6 +1411,10 @@
           );
           dataEl.appendChild(createHistoryRow("Start Date", startDateInput));
           dataEl.appendChild(createHistoryRow("End Date", endDateInput));
+          dataEl.appendChild(createHistoryRow("Interest Date", interestDateInput));
+          dataEl.appendChild(
+            createHistoryRow("Interest Amount (Rs)", interestAmountInput),
+          );
           dataEl.appendChild(createHistoryRow("Duration", entry.duration));
           dataEl.appendChild(
             createHistoryRow("Simple Interest Rate", entry.rate, {
@@ -1371,13 +1518,15 @@
             : "—";
           summaryRow.appendChild(rateCell);
 
-          const startCell = document.createElement("td");
-          startCell.textContent = entry.startDate || "—";
-          summaryRow.appendChild(startCell);
+          const interestDateCell = document.createElement("td");
+          interestDateCell.textContent = entry.interestDate || "—";
+          summaryRow.appendChild(interestDateCell);
 
-          const endCell = document.createElement("td");
-          endCell.textContent = entry.endDate || "—";
-          summaryRow.appendChild(endCell);
+          const interestAmountCell = document.createElement("td");
+          interestAmountCell.textContent = Number.isFinite(entry.interestAmountRs)
+            ? formatCurrencyNoDecimals(entry.interestAmountRs)
+            : "—";
+          summaryRow.appendChild(interestAmountCell);
 
           historySummaryBody.appendChild(summaryRow);
         });
@@ -1483,6 +1632,41 @@
           renderHistory();
         } catch (error) {
           console.error("Error updating dates:", error);
+        }
+      }
+
+      async function updateHistoryInterestFields(
+        entryId,
+        interestDateValue,
+        interestAmountValue,
+      ) {
+        try {
+          const entries = await loadHistory();
+          const target = entries.find((entry) => entry.id === entryId);
+          if (!target) return;
+
+          target.rawInterestDate = interestDateValue || "";
+          const interestDate = parseStoredNoteDate(target.rawInterestDate);
+          target.interestDate = interestDate ? formatDateForNote(interestDate) : "—";
+
+          const amountInput = String(interestAmountValue || "").trim();
+          if (amountInput === "") {
+            target.interestAmountRs = null;
+          } else {
+            const amount = Number(amountInput);
+            if (Number.isFinite(amount) && amount >= 0) {
+              target.interestAmountRs = amount;
+            }
+          }
+
+          await window.db.collection("history").doc(entryId).update({
+            rawInterestDate: target.rawInterestDate,
+            interestDate: target.interestDate,
+            interestAmountRs: target.interestAmountRs,
+          });
+          renderHistory();
+        } catch (error) {
+          console.error("Error updating interest fields:", error);
         }
       }
 
@@ -1624,7 +1808,7 @@
       $("clearHistoryBtn").addEventListener("click", async () => {
         if (
           confirm(
-            "Are you sure you want to clear all session history? This action cannot be undone.",
+            "Are you sure you want to delete all notes? This action cannot be undone.",
           )
         ) {
           try {
@@ -1793,6 +1977,8 @@
         const quantityRaw = Number($("quantity").value);
         const startStr = getDateRawValue("startDate", "startDateText");
         const endStr = getDateRawValue("endDate", "endDateText");
+        const interestDateStr = $("interestDate").value.trim();
+        const interestAmountRaw = $("interestAmountRs").value.trim();
 
         // Validation
         let errors = [];
@@ -1840,6 +2026,29 @@
           return;
         }
 
+        let interestDate = null;
+        if (interestDateStr) {
+          const parsedInterestDate = parseDateInput(interestDateStr);
+          if (!parsedInterestDate) {
+            $("errorMsg").textContent = "Interest date format is invalid.";
+            $("interestDate").classList.add("error");
+            return;
+          }
+          interestDate = parsedInterestDate;
+        }
+
+        let interestAmount = null;
+        if (interestAmountRaw) {
+          const parsedInterestAmount = Number(interestAmountRaw);
+          if (!Number.isFinite(parsedInterestAmount) || parsedInterestAmount < 0) {
+            $("errorMsg").textContent =
+              "Interest amount must be a non-negative number.";
+            $("interestAmountRs").classList.add("error");
+            return;
+          }
+          interestAmount = parsedInterestAmount;
+        }
+
         const days = daysBetween(startDate, endDate);
 
         if (days <= 0) {
@@ -1883,8 +2092,11 @@
           maturity: formatCurrency(maturity),
           rawStartDate: toIsoDate(startDate),
           rawEndDate: toIsoDate(endDate),
+          rawInterestDate: interestDate ? toIsoDate(interestDate) : "",
           startDate: formatDateForNote(startDate),
           endDate: formatDateForNote(endDate),
+          interestDate: interestDate ? formatDateForNote(interestDate) : "—",
+          interestAmountRs: interestAmount,
           duration: durationText(days),
           noteText: "",
           rate: ratePct.toFixed(4) + " %",

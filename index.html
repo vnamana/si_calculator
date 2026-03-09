@@ -540,6 +540,30 @@
         font-weight: 700;
       }
 
+      .history-summary-table th[data-sort-key] {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .history-summary-table th[data-sort-key]::after {
+        content: " ↕";
+        opacity: 0.45;
+      }
+
+      .history-summary-table th.sort-active {
+        background: #eef6fa;
+      }
+
+      .history-summary-table th.sort-active.sort-asc::after {
+        content: " ↑";
+        opacity: 1;
+      }
+
+      .history-summary-table th.sort-active.sort-desc::after {
+        content: " ↓";
+        opacity: 1;
+      }
+
       .history-summary-table tbody tr:last-child td {
         border-bottom: none;
       }
@@ -801,12 +825,12 @@
             <table class="history-summary-table">
               <thead>
                 <tr>
-                  <th>Note</th>
-                  <th>Principal</th>
-                  <th>Maturity</th>
-                  <th>SI Rate</th>
-                  <th>Interest Date</th>
-                  <th>Interest Amt (Rs)</th>
+                  <th data-sort-key="note">Note</th>
+                  <th data-sort-key="principal">Principal</th>
+                  <th data-sort-key="maturity">Maturity</th>
+                  <th data-sort-key="rate">SI Rate</th>
+                  <th data-sort-key="interestDate">Interest Date</th>
+                  <th data-sort-key="interestAmount">Interest Amt (Rs)</th>
                 </tr>
               </thead>
               <tbody id="historySummaryBody"></tbody>
@@ -898,6 +922,15 @@
       const HISTORY_KEY = "simple-interest-history-v1";
       let currentCalcData = null;
       const HISTORY_SORT_KEY = "simple-interest-history-sort-v1";
+      const SUMMARY_SORT_KEY = "simple-interest-summary-sort-v1";
+      const SUMMARY_SORT_COLUMNS = new Set([
+        "note",
+        "principal",
+        "maturity",
+        "rate",
+        "interestDate",
+        "interestAmount",
+      ]);
 
       function parseCurrencyText(value) {
         if (typeof value === "number") return value;
@@ -977,6 +1010,110 @@
           if (bIsInvalid) return -1;
 
           return mode === "rate-desc" ? rateB - rateA : rateA - rateB;
+        });
+
+        return sorted;
+      }
+
+      function getSummarySortState() {
+        const fallback = { column: null, direction: "asc" };
+        try {
+          const stored = JSON.parse(localStorage.getItem(SUMMARY_SORT_KEY) || "null");
+          if (!stored || typeof stored !== "object") return fallback;
+
+          const column = SUMMARY_SORT_COLUMNS.has(stored.column)
+            ? stored.column
+            : null;
+          const direction = stored.direction === "desc" ? "desc" : "asc";
+          return { column, direction };
+        } catch (error) {
+          return fallback;
+        }
+      }
+
+      function setSummarySortState(state) {
+        localStorage.setItem(SUMMARY_SORT_KEY, JSON.stringify(state));
+      }
+
+      function updateSummarySortHeaders(state) {
+        const summaryTable = document.querySelector(".history-summary-table");
+        if (!summaryTable) return;
+
+        const headers = summaryTable.querySelectorAll("th[data-sort-key]");
+        headers.forEach((header) => {
+          const key = header.dataset.sortKey;
+          const isActive = state.column === key;
+          header.classList.toggle("sort-active", isActive);
+          header.classList.toggle("sort-asc", isActive && state.direction === "asc");
+          header.classList.toggle("sort-desc", isActive && state.direction === "desc");
+          header.setAttribute(
+            "aria-sort",
+            isActive
+              ? state.direction === "asc"
+                ? "ascending"
+                : "descending"
+              : "none",
+          );
+        });
+      }
+
+      function compareSummaryValues(aValue, bValue, direction) {
+        const multiplier = direction === "desc" ? -1 : 1;
+        const aIsNumber = typeof aValue === "number" && Number.isFinite(aValue);
+        const bIsNumber = typeof bValue === "number" && Number.isFinite(bValue);
+
+        if (aIsNumber && bIsNumber) {
+          return (aValue - bValue) * multiplier;
+        }
+
+        if (aIsNumber && !bIsNumber) return -1;
+        if (!aIsNumber && bIsNumber) return 1;
+
+        const left = String(aValue || "");
+        const right = String(bValue || "");
+        return left.localeCompare(right, undefined, { numeric: true }) * multiplier;
+      }
+
+      function sortSummaryEntries(entries, state) {
+        if (!state.column) return entries;
+
+        const sorted = [...entries];
+        sorted.sort((a, b) => {
+          let aValue = "";
+          let bValue = "";
+
+          if (state.column === "note") {
+            aValue = (a.entry.noteName || "Untitled note").toLowerCase();
+            bValue = (b.entry.noteName || "Untitled note").toLowerCase();
+          } else if (state.column === "principal") {
+            aValue = a.scaled.principal;
+            bValue = b.scaled.principal;
+          } else if (state.column === "maturity") {
+            aValue = a.scaled.maturity;
+            bValue = b.scaled.maturity;
+          } else if (state.column === "rate") {
+            aValue = parseRatePercent(a.entry.rate);
+            bValue = parseRatePercent(b.entry.rate);
+          } else if (state.column === "interestDate") {
+            const aDate = parseStoredNoteDate(a.entry.rawInterestDate || a.entry.interestDate);
+            const bDate = parseStoredNoteDate(b.entry.rawInterestDate || b.entry.interestDate);
+            aValue = aDate ? aDate.getTime() : Number.NaN;
+            bValue = bDate ? bDate.getTime() : Number.NaN;
+          } else if (state.column === "interestAmount") {
+            aValue = Number.isFinite(a.entry.interestAmountRs)
+              ? a.entry.interestAmountRs
+              : Number.NaN;
+            bValue = Number.isFinite(b.entry.interestAmountRs)
+              ? b.entry.interestAmountRs
+              : Number.NaN;
+          }
+
+          const comparison = compareSummaryValues(aValue, bValue, state.direction);
+          if (comparison !== 0) return comparison;
+
+          const noteA = (a.entry.noteName || "Untitled note").toLowerCase();
+          const noteB = (b.entry.noteName || "Untitled note").toLowerCase();
+          return noteA.localeCompare(noteB, undefined, { numeric: true });
         });
 
         return sorted;
@@ -1239,12 +1376,15 @@
         const historyEmpty = $("historyEmpty");
         const historySummary = $("historySummary");
         const historySummaryBody = $("historySummaryBody");
+        const summarySortState = getSummarySortState();
         const entries = await loadHistory();
         const sortMode = getHistorySortMode();
         const displayEntries = sortHistoryEntries(entries, sortMode);
+        const summaryRowsData = [];
 
         historyList.innerHTML = "";
         historySummaryBody.innerHTML = "";
+        updateSummarySortHeaders(summarySortState);
 
         if (!displayEntries.length) {
           historyEmpty.style.display = "block";
@@ -1492,44 +1632,50 @@
           item.appendChild(actionsEl);
           historyList.appendChild(item);
 
-          const summaryRow = document.createElement("tr");
-
-          const noteCell = document.createElement("td");
-          const noteText = document.createElement("div");
-          noteText.className = "history-summary-note";
-          noteText.textContent = entry.noteName || "Untitled note";
-          noteCell.appendChild(noteText);
-          summaryRow.appendChild(noteCell);
-
-          const principalCell = document.createElement("td");
-          principalCell.textContent = formatCurrencyNoDecimals(
-            scaled.principal,
-          );
-          summaryRow.appendChild(principalCell);
-
-          const maturityCell = document.createElement("td");
-          maturityCell.textContent = formatCurrencyNoDecimals(scaled.maturity);
-          summaryRow.appendChild(maturityCell);
-
-          const rateCell = document.createElement("td");
-          const summaryRate = parseRatePercent(entry.rate);
-          rateCell.textContent = Number.isFinite(summaryRate)
-            ? `${summaryRate.toFixed(2)}%`
-            : "—";
-          summaryRow.appendChild(rateCell);
-
-          const interestDateCell = document.createElement("td");
-          interestDateCell.textContent = entry.interestDate || "—";
-          summaryRow.appendChild(interestDateCell);
-
-          const interestAmountCell = document.createElement("td");
-          interestAmountCell.textContent = Number.isFinite(entry.interestAmountRs)
-            ? formatCurrencyNoDecimals(entry.interestAmountRs)
-            : "—";
-          summaryRow.appendChild(interestAmountCell);
-
-          historySummaryBody.appendChild(summaryRow);
+          summaryRowsData.push({ entry, scaled });
         });
+
+        sortSummaryEntries(summaryRowsData, summarySortState).forEach(
+          ({ entry, scaled }) => {
+            const summaryRow = document.createElement("tr");
+
+            const noteCell = document.createElement("td");
+            const noteText = document.createElement("div");
+            noteText.className = "history-summary-note";
+            noteText.textContent = entry.noteName || "Untitled note";
+            noteCell.appendChild(noteText);
+            summaryRow.appendChild(noteCell);
+
+            const principalCell = document.createElement("td");
+            principalCell.textContent = formatCurrencyNoDecimals(
+              scaled.principal,
+            );
+            summaryRow.appendChild(principalCell);
+
+            const maturityCell = document.createElement("td");
+            maturityCell.textContent = formatCurrencyNoDecimals(scaled.maturity);
+            summaryRow.appendChild(maturityCell);
+
+            const rateCell = document.createElement("td");
+            const summaryRate = parseRatePercent(entry.rate);
+            rateCell.textContent = Number.isFinite(summaryRate)
+              ? `${summaryRate.toFixed(2)}%`
+              : "—";
+            summaryRow.appendChild(rateCell);
+
+            const interestDateCell = document.createElement("td");
+            interestDateCell.textContent = entry.interestDate || "—";
+            summaryRow.appendChild(interestDateCell);
+
+            const interestAmountCell = document.createElement("td");
+            interestAmountCell.textContent = Number.isFinite(entry.interestAmountRs)
+              ? formatCurrencyNoDecimals(entry.interestAmountRs)
+              : "—";
+            summaryRow.appendChild(interestAmountCell);
+
+            historySummaryBody.appendChild(summaryRow);
+          },
+        );
       }
 
       async function updateHistoryNoteText(entryId, noteText) {
@@ -1845,6 +1991,22 @@
         setHistorySortMode($("historySort").value);
         renderHistory();
       });
+
+      document
+        .querySelectorAll(".history-summary-table th[data-sort-key]")
+        .forEach((header) => {
+          header.addEventListener("click", () => {
+            const column = header.dataset.sortKey;
+            const currentState = getSummarySortState();
+            const direction =
+              currentState.column === column && currentState.direction === "asc"
+                ? "desc"
+                : "asc";
+
+            setSummarySortState({ column, direction });
+            renderHistory();
+          });
+        });
 
       $("historySort").value = getHistorySortMode();
 

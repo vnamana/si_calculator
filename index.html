@@ -99,6 +99,12 @@
         margin: 0 auto;
       }
 
+      #mfPage {
+        width: 100%;
+        max-width: 560px;
+        margin: 0 auto;
+      }
+
       #notesPage,
       #sessionPage {
         width: 100%;
@@ -205,13 +211,34 @@
 
       #clearHistoryBtn {
         width: auto;
-        display: block;
+        display: inline-block;
         padding: 6px 10px;
         font-size: 0.8rem;
         font-weight: 600;
+        margin-top: 0;
+        margin-left: 0;
+        margin-right: 0;
+      }
+
+      .session-actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
         margin-top: 8px;
-        margin-left: auto;
-        margin-right: auto;
+        flex-wrap: wrap;
+      }
+
+      .return-notes-link {
+        border: none;
+        background: transparent;
+        color: #2c5364;
+        text-decoration: underline;
+        font-size: 0.82rem;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        padding: 4px 0;
       }
 
       .error-msg {
@@ -219,6 +246,39 @@
         font-size: 0.85rem;
         margin-top: 6px;
         min-height: 20px;
+      }
+
+      .mf-card {
+        border: 1px solid #d8e8ee;
+        border-radius: 12px;
+        background: #f8fbfd;
+        padding: 14px;
+        margin-top: 12px;
+      }
+
+      .mf-card h3 {
+        color: #2c5364;
+        font-size: 1rem;
+        margin-bottom: 10px;
+      }
+
+      .mf-results {
+        margin-top: 10px;
+        border: 1px solid #d8e8ee;
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px;
+        display: none;
+      }
+
+      .mf-results.show {
+        display: block;
+      }
+
+      .mf-note {
+        margin-top: 8px;
+        color: #60727a;
+        font-size: 0.78rem;
       }
 
       /* Results */
@@ -526,6 +586,7 @@
         gap: 8px;
         font-size: 0.72rem;
         font-weight: 600;
+        flex-wrap: wrap;
       }
 
       .history-summary-col-toggle {
@@ -533,6 +594,7 @@
         align-items: center;
         gap: 4px;
         cursor: pointer;
+        white-space: nowrap;
       }
 
       .history-summary-toggle {
@@ -601,6 +663,18 @@
         overflow: hidden;
         line-height: 1.2;
         max-height: 2.4em;
+      }
+
+      .history-summary-note-link {
+        border: none;
+        background: transparent;
+        color: #2c5364;
+        text-decoration: underline;
+        cursor: pointer;
+        font: inherit;
+        padding: 0;
+        text-align: left;
+        width: 100%;
       }
 
       .history-summary-table th {
@@ -797,6 +871,7 @@
         <button class="site-nav-btn active" id="navNotesBtn" data-page="notesPage" type="button">Home / Notes</button>
         <button class="site-nav-btn" id="navSessionBtn" data-page="sessionPage" type="button">Session Notes</button>
         <button class="site-nav-btn" id="navCalculatorBtn" data-page="calculatorPage" type="button">Calculator</button>
+        <button class="site-nav-btn" id="navMfBtn" data-page="mfPage" type="button">MF Returns</button>
       </nav>
 
       <section class="app-page active" id="notesPage">
@@ -807,11 +882,19 @@
               <div class="history-summary-columns">
                 <label class="history-summary-col-toggle" for="summaryShowStartDate">
                   <input type="checkbox" id="summaryShowStartDate" />
-                  <span>Start Date</span>
+                  <span>Start</span>
                 </label>
                 <label class="history-summary-col-toggle" for="summaryShowEndDate">
                   <input type="checkbox" id="summaryShowEndDate" />
-                  <span>End Date</span>
+                  <span>End</span>
+                </label>
+                <label class="history-summary-col-toggle" for="summaryShowMaturity">
+                  <input type="checkbox" id="summaryShowMaturity" />
+                  <span>Mat.</span>
+                </label>
+                <label class="history-summary-col-toggle" for="summaryShowRate">
+                  <input type="checkbox" id="summaryShowRate" />
+                  <span>SI%</span>
                 </label>
               </div>
             </div>
@@ -857,9 +940,14 @@
           <p class="history-empty" id="historyEmpty">
             No saved calculations yet.
           </p>
-          <button class="btn secondary" id="clearHistoryBtn" type="button">
-            Delete All Notes
-          </button>
+          <div class="session-actions">
+            <button class="btn secondary" id="clearHistoryBtn" type="button">
+              Delete All Notes
+            </button>
+            <button class="return-notes-link" id="returnToNotesBtn" type="button">
+              Return to Notes
+            </button>
+          </div>
         </div>
       </section>
 
@@ -976,6 +1064,57 @@
           Save as Note
         </button>
       </section>
+
+      <section class="app-page" id="mfPage">
+        <div class="mf-card">
+          <h3>SIP Calculator</h3>
+          <div class="form-group">
+            <label for="sipMonthlyAmount">Monthly SIP Amount (₹)</label>
+            <input type="number" id="sipMonthlyAmount" placeholder="5000" min="0" step="any" />
+          </div>
+          <div class="date-row">
+            <div class="form-group">
+              <label for="sipAnnualRate">Expected Annual Return (%)</label>
+              <input type="number" id="sipAnnualRate" placeholder="12" min="0" step="any" />
+            </div>
+            <div class="form-group">
+              <label for="sipYears">Duration (Years)</label>
+              <input type="number" id="sipYears" placeholder="6" min="0" step="any" />
+            </div>
+          </div>
+          <button class="btn" id="calcSipBtn" type="button">Calculate SIP Returns</button>
+          <div class="mf-results" id="sipResults">
+            <div class="result-row"><span class="label">Total Invested</span><span class="value" id="sipInvested">—</span></div>
+            <div class="result-row"><span class="label">Estimated Returns</span><span class="value" id="sipGain">—</span></div>
+            <div class="result-row"><span class="label">Maturity Amount</span><span class="value" id="sipMaturity">—</span></div>
+          </div>
+          <p class="mf-note">SIP assumes monthly contribution at end of each month.</p>
+        </div>
+
+        <div class="mf-card">
+          <h3>Lumpsum Calculator</h3>
+          <div class="form-group">
+            <label for="lumpsumAmount">Lumpsum Amount (₹)</label>
+            <input type="number" id="lumpsumAmount" placeholder="100000" min="0" step="any" />
+          </div>
+          <div class="date-row">
+            <div class="form-group">
+              <label for="lumpsumAnnualRate">Expected Annual Return (%)</label>
+              <input type="number" id="lumpsumAnnualRate" placeholder="12" min="0" step="any" />
+            </div>
+            <div class="form-group">
+              <label for="lumpsumYears">Duration (Years)</label>
+              <input type="number" id="lumpsumYears" placeholder="6" min="0" step="any" />
+            </div>
+          </div>
+          <button class="btn" id="calcLumpsumBtn" type="button">Calculate Lumpsum Returns</button>
+          <div class="mf-results" id="lumpsumResults">
+            <div class="result-row"><span class="label">Total Invested</span><span class="value" id="lumpsumInvested">—</span></div>
+            <div class="result-row"><span class="label">Estimated Returns</span><span class="value" id="lumpsumGain">—</span></div>
+            <div class="result-row"><span class="label">Maturity Amount</span><span class="value" id="lumpsumMaturity">—</span></div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <script>
@@ -1033,8 +1172,6 @@
       const SUMMARY_BASE_COLUMNS = [
         "note",
         "principal",
-        "maturity",
-        "rate",
         "interestDate",
         "interestAmount",
       ];
@@ -1163,7 +1300,12 @@
       }
 
       function getSummaryColumnConfig() {
-        const fallback = { startDate: false, endDate: false };
+        const fallback = {
+          startDate: false,
+          endDate: false,
+          maturity: true,
+          rate: true,
+        };
         try {
           const stored = JSON.parse(
             localStorage.getItem(SUMMARY_COLUMNS_KEY) || "null",
@@ -1173,6 +1315,8 @@
           return {
             startDate: Boolean(stored.startDate),
             endDate: Boolean(stored.endDate),
+            maturity: stored.maturity !== false,
+            rate: stored.rate !== false,
           };
         } catch (error) {
           return fallback;
@@ -1186,13 +1330,28 @@
       function getVisibleSummaryColumns() {
         const config = getSummaryColumnConfig();
         const columns = [...SUMMARY_BASE_COLUMNS];
-        const insertAt = 4;
+        const insertAt = 2;
+
+        if (config.maturity) {
+          columns.splice(insertAt, 0, "maturity");
+        }
+
+        if (config.rate) {
+          columns.splice(insertAt + (config.maturity ? 1 : 0), 0, "rate");
+        }
 
         if (config.startDate) {
-          columns.splice(insertAt, 0, "startDate");
+          columns.splice(insertAt + (config.maturity ? 1 : 0) + (config.rate ? 1 : 0), 0, "startDate");
         }
         if (config.endDate) {
-          columns.splice(insertAt + (config.startDate ? 1 : 0), 0, "endDate");
+          columns.splice(
+            insertAt +
+              (config.maturity ? 1 : 0) +
+              (config.rate ? 1 : 0) +
+              (config.startDate ? 1 : 0),
+            0,
+            "endDate",
+          );
         }
 
         return columns;
@@ -1202,6 +1361,8 @@
         const config = getSummaryColumnConfig();
         $("summaryShowStartDate").checked = config.startDate;
         $("summaryShowEndDate").checked = config.endDate;
+        $("summaryShowMaturity").checked = config.maturity;
+        $("summaryShowRate").checked = config.rate;
       }
 
       function renderSummaryHeaders(columns) {
@@ -1612,6 +1773,7 @@
 
           const item = document.createElement("li");
           item.className = "history-item";
+          item.dataset.entryId = entry.id;
 
           const titleEl = document.createElement("input");
           titleEl.type = "text";
@@ -1863,7 +2025,22 @@
               if (column === "note") {
                 const noteText = document.createElement("div");
                 noteText.className = "history-summary-note";
-                noteText.textContent = entry.noteName || "Untitled note";
+                const noteLink = document.createElement("button");
+                noteLink.type = "button";
+                noteLink.className = "history-summary-note-link";
+                noteLink.textContent = entry.noteName || "Untitled note";
+                noteLink.addEventListener("click", () => {
+                  setActivePage("sessionPage");
+                  setHistoryCollapsed(false);
+
+                  const targetItem = document.querySelector(
+                    `.history-item[data-entry-id="${entry.id}"]`,
+                  );
+                  if (targetItem) {
+                    targetItem.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }
+                });
+                noteText.appendChild(noteLink);
                 cell.appendChild(noteText);
               } else if (column === "principal") {
                 cell.textContent = formatCurrencyNoDecimals(scaled.principal);
@@ -2285,10 +2462,28 @@
         renderHistory();
       });
 
+      $("summaryShowMaturity").addEventListener("change", () => {
+        const config = getSummaryColumnConfig();
+        config.maturity = $("summaryShowMaturity").checked;
+        setSummaryColumnConfig(config);
+        renderHistory();
+      });
+
+      $("summaryShowRate").addEventListener("change", () => {
+        const config = getSummaryColumnConfig();
+        config.rate = $("summaryShowRate").checked;
+        setSummaryColumnConfig(config);
+        renderHistory();
+      });
+
       document.querySelectorAll(".site-nav-btn").forEach((button) => {
         button.addEventListener("click", () => {
           setActivePage(button.dataset.page);
         });
+      });
+
+      $("returnToNotesBtn").addEventListener("click", () => {
+        setActivePage("notesPage");
       });
 
       $("historySort").value = getHistorySortMode();
@@ -2400,6 +2595,59 @@
         const d = Math.round(days % 30);
         return `${years}Y${months}M${d}D`;
       }
+
+      function parseNonNegativeNumber(value) {
+        const num = Number(value);
+        return Number.isFinite(num) && num >= 0 ? num : NaN;
+      }
+
+      $("calcSipBtn").addEventListener("click", () => {
+        const monthly = parseNonNegativeNumber($("sipMonthlyAmount").value);
+        const annualRatePct = parseNonNegativeNumber($("sipAnnualRate").value);
+        const years = parseNonNegativeNumber($("sipYears").value);
+
+        if (!Number.isFinite(monthly) || !Number.isFinite(annualRatePct) || !Number.isFinite(years) || years === 0) {
+          alert("Enter valid SIP amount, annual return rate, and duration in years.");
+          return;
+        }
+
+        const months = Math.round(years * 12);
+        const monthlyRate = annualRatePct / 100 / 12;
+        const totalInvested = monthly * months;
+
+        let maturity = 0;
+        if (monthlyRate === 0) {
+          maturity = totalInvested;
+        } else {
+          maturity = monthly * (((1 + monthlyRate) ** months - 1) / monthlyRate);
+        }
+
+        const gain = maturity - totalInvested;
+        $("sipInvested").textContent = formatCurrency(totalInvested);
+        $("sipGain").textContent = formatCurrency(gain);
+        $("sipMaturity").textContent = formatCurrency(maturity);
+        $("sipResults").classList.add("show");
+      });
+
+      $("calcLumpsumBtn").addEventListener("click", () => {
+        const principal = parseNonNegativeNumber($("lumpsumAmount").value);
+        const annualRatePct = parseNonNegativeNumber($("lumpsumAnnualRate").value);
+        const years = parseNonNegativeNumber($("lumpsumYears").value);
+
+        if (!Number.isFinite(principal) || !Number.isFinite(annualRatePct) || !Number.isFinite(years) || years === 0) {
+          alert("Enter valid lumpsum amount, annual return rate, and duration in years.");
+          return;
+        }
+
+        const annualRate = annualRatePct / 100;
+        const maturity = principal * (1 + annualRate) ** years;
+        const gain = maturity - principal;
+
+        $("lumpsumInvested").textContent = formatCurrency(principal);
+        $("lumpsumGain").textContent = formatCurrency(gain);
+        $("lumpsumMaturity").textContent = formatCurrency(maturity);
+        $("lumpsumResults").classList.add("show");
+      });
 
       function formatDateForNote(date) {
         return date.toLocaleDateString("en-IN", {

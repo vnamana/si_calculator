@@ -281,6 +281,124 @@
         font-size: 0.78rem;
       }
 
+      .mf-dynamic-group {
+        border: 1px solid #d8e8ee;
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px;
+        margin-top: 10px;
+      }
+
+      .mf-dynamic-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .mf-dynamic-title {
+        color: #2c5364;
+        font-size: 0.86rem;
+        font-weight: 700;
+      }
+
+      .mf-add-btn {
+        border: 1px solid #2c5364;
+        background: #fff;
+        color: #2c5364;
+        border-radius: 6px;
+        width: 28px;
+        height: 28px;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        line-height: 1;
+      }
+
+      .mf-money-row {
+        display: grid;
+        grid-template-columns: 1fr 130px auto;
+        gap: 8px;
+        margin-top: 6px;
+      }
+
+      .mf-remove-row-btn {
+        border: 1px solid #d8e8ee;
+        background: #fff;
+        color: #d9534f;
+        border-radius: 6px;
+        padding: 0 10px;
+        min-height: 38px;
+        font-size: 1rem;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .mf-remove-row-btn:hover {
+        border-color: #d9534f;
+      }
+
+      .mf-money-row input {
+        width: 100%;
+      }
+
+      .mf-action-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+
+      .mf-action-row .btn {
+        width: auto;
+        margin-top: 0;
+      }
+
+      .mf-saved-list {
+        margin-top: 12px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .mf-saved-item {
+        border: 1px solid #d8e8ee;
+        border-radius: 8px;
+        background: #fff;
+        padding: 8px;
+      }
+
+      .mf-saved-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .mf-saved-name {
+        color: #2c5364;
+        font-size: 0.86rem;
+        font-weight: 700;
+      }
+
+      .mf-saved-meta {
+        margin-top: 4px;
+        color: #60727a;
+        font-size: 0.76rem;
+      }
+
+      .mf-edit-btn {
+        border: 1px solid #2c5364;
+        background: #fff;
+        color: #2c5364;
+        border-radius: 6px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        padding: 4px 8px;
+        cursor: pointer;
+      }
+
       /* Results */
       .results {
         margin-top: 28px;
@@ -841,6 +959,10 @@
           margin-left: 0;
           margin-right: 0;
         }
+
+        .mf-money-row {
+          grid-template-columns: 1fr 110px auto;
+        }
       }
     </style>
   </head>
@@ -871,7 +993,7 @@
         <button class="site-nav-btn active" id="navNotesBtn" data-page="notesPage" type="button">Home / Notes</button>
         <button class="site-nav-btn" id="navSessionBtn" data-page="sessionPage" type="button">Session Notes</button>
         <button class="site-nav-btn" id="navCalculatorBtn" data-page="calculatorPage" type="button">Calculator</button>
-        <button class="site-nav-btn" id="navMfBtn" data-page="mfPage" type="button">MF Returns</button>
+        <button class="site-nav-btn" id="navMfBtn" data-page="mfPage" type="button">Cash Flow</button>
       </nav>
 
       <section class="app-page active" id="notesPage">
@@ -1066,6 +1188,50 @@
       </section>
 
       <section class="app-page" id="mfPage">
+        <div class="mf-card">
+          <h3>Cashflow Planner</h3>
+
+          <div class="form-group">
+            <label for="cashflowRecordName">Record Name</label>
+            <input type="text" id="cashflowRecordName" placeholder="e.g. Monthly Plan" />
+          </div>
+
+          <div class="mf-dynamic-group">
+            <div class="mf-dynamic-head">
+              <span class="mf-dynamic-title">Income</span>
+              <button class="mf-add-btn" id="addIncomeBtn" type="button" aria-label="Add income">+</button>
+            </div>
+            <div id="incomeRows"></div>
+          </div>
+
+          <div class="mf-dynamic-group">
+            <div class="mf-dynamic-head">
+              <span class="mf-dynamic-title">Credit Card Bills</span>
+              <button class="mf-add-btn" id="addCardBillBtn" type="button" aria-label="Add credit card bill">+</button>
+            </div>
+            <div id="cardBillRows"></div>
+          </div>
+
+          <div class="mf-dynamic-group">
+            <div class="mf-dynamic-head">
+              <span class="mf-dynamic-title">Other Expenses</span>
+              <button class="mf-add-btn" id="addExpenseBtn" type="button" aria-label="Add expense">+</button>
+            </div>
+            <div id="expenseRows"></div>
+          </div>
+
+          <button class="btn" id="calcLeftoverBtn" type="button">Calculate Net Balance</button>
+          <div class="mf-action-row">
+            <button class="btn secondary" id="saveCashflowBtn" type="button">Save Record</button>
+          </div>
+          <div class="mf-results" id="leftoverResults">
+            <div class="result-row"><span class="label">Total Income</span><span class="value" id="totalIncomeValue">—</span></div>
+            <div class="result-row"><span class="label">Total Bills + Expenses</span><span class="value" id="totalOutflowValue">—</span></div>
+            <div class="result-row"><span class="label">Net Balance</span><span class="value" id="leftoverValue">—</span></div>
+          </div>
+          <div class="mf-saved-list" id="cashflowSavedList"></div>
+        </div>
+
         <div class="mf-card">
           <h3>SIP Calculator</h3>
           <div class="form-group">
@@ -2606,11 +2772,14 @@
             setSummaryColumnConfig(dbConfig, { persistRemote: false });
           }
           showCalculator();
+          await loadCashflowRecords();
           if (signOutBtn) {
             signOutBtn.style.display = "block";
           }
         } else {
           showAuthUI();
+          $("cashflowSavedList").innerHTML = "";
+          setCashflowEditMode(null);
           if (signOutBtn) {
             signOutBtn.style.display = "none";
           }
@@ -2648,8 +2817,195 @@
       }
 
       function parseNonNegativeNumber(value) {
-        const num = Number(value);
+        if (value === null || value === undefined) return NaN;
+
+        const raw = String(value).trim();
+        if (!raw) return NaN;
+
+        const normalized = raw.replace(/[₹,\s]/g, "");
+        const num = Number(normalized);
         return Number.isFinite(num) && num >= 0 ? num : NaN;
+      }
+
+      let currentCashflowRecordId = null;
+
+      function createMoneyRowElement(namePlaceholder, value = "", name = "") {
+        const row = document.createElement("div");
+        row.className = "mf-money-row";
+
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.placeholder = namePlaceholder;
+        nameInput.className = "mf-money-name";
+        nameInput.value = name;
+
+        const amountInput = document.createElement("input");
+        amountInput.type = "text";
+        amountInput.inputMode = "decimal";
+        amountInput.pattern = "[0-9.,₹\\s]*";
+        amountInput.placeholder = "Amount";
+        amountInput.className = "mf-money-input";
+        amountInput.value = value === null || value === undefined ? "" : String(value);
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "mf-remove-row-btn";
+        removeBtn.setAttribute("aria-label", "Remove row");
+        removeBtn.textContent = "−";
+        removeBtn.addEventListener("click", () => {
+          row.remove();
+        });
+
+        row.appendChild(nameInput);
+        row.appendChild(amountInput);
+        row.appendChild(removeBtn);
+        return row;
+      }
+
+      function collectMoneyRows(containerId, labelPrefix) {
+        const rows = Array.from($(containerId).querySelectorAll(".mf-money-row"));
+        const items = [];
+
+        rows.forEach((row, index) => {
+          const nameInput = row.querySelector(".mf-money-name");
+          const amountInput = row.querySelector(".mf-money-input");
+          if (!nameInput || !amountInput) return;
+
+          const name = (nameInput.value || "").trim() || `${labelPrefix} ${index + 1}`;
+          const amountRaw = (amountInput.value || "").trim();
+
+          const amount = parseNonNegativeNumber(amountRaw);
+          if (Number.isFinite(amount)) {
+            items.push({ name, amount });
+          }
+        });
+
+        return items;
+      }
+
+      function fillMoneyRows(containerId, labelPrefix, items) {
+        const container = $(containerId);
+        container.innerHTML = "";
+
+        if (!Array.isArray(items) || !items.length) {
+          addMoneyRow(containerId, labelPrefix);
+          return;
+        }
+
+        items.forEach((item, index) => {
+          const row = createMoneyRowElement(
+            `${labelPrefix} ${index + 1}`,
+            item.amount,
+            item.name,
+          );
+          container.appendChild(row);
+        });
+      }
+
+      function getCashflowTotals() {
+        const incomeTotal = getMoneyRowsTotal("incomeRows");
+        const billTotal = getMoneyRowsTotal("cardBillRows");
+        const expenseTotal = getMoneyRowsTotal("expenseRows");
+
+        if (
+          !Number.isFinite(incomeTotal) ||
+          !Number.isFinite(billTotal) ||
+          !Number.isFinite(expenseTotal)
+        ) {
+          return null;
+        }
+
+        const outflow = billTotal + expenseTotal;
+        const leftover = incomeTotal - outflow;
+        return { incomeTotal, outflow, leftover };
+      }
+
+      function renderCashflowTotals(totals) {
+        $("totalIncomeValue").textContent = formatCurrency(totals.incomeTotal);
+        $("totalOutflowValue").textContent = formatCurrency(totals.outflow);
+        $("leftoverValue").textContent = formatCurrency(totals.leftover);
+        $("leftoverResults").classList.add("show");
+      }
+
+      function setCashflowEditMode(recordId) {
+        currentCashflowRecordId = recordId || null;
+        $("saveCashflowBtn").textContent = recordId ? "Update Record" : "Save Record";
+      }
+
+      function populateCashflowFromRecord(record) {
+        $("cashflowRecordName").value = record.name || "";
+        fillMoneyRows("incomeRows", "Income", record.incomes || []);
+        fillMoneyRows("cardBillRows", "Bill", record.cardBills || []);
+        fillMoneyRows("expenseRows", "Expense", record.otherExpenses || []);
+        renderCashflowTotals({
+          incomeTotal: Number(record.totalIncome || 0),
+          outflow: Number(record.totalOutflow || 0),
+          leftover: Number(record.leftover || 0),
+        });
+      }
+
+      async function loadCashflowRecords() {
+        const list = $("cashflowSavedList");
+        list.innerHTML = "";
+
+        if (!window.auth.currentUser) return;
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const email = window.auth.currentUser.email || "";
+
+          let snap = await window.db
+            .collection("cashflowRecords")
+            .where("createdBy", "==", uid)
+            .get();
+
+          if (snap.empty && email) {
+            snap = await window.db
+              .collection("cashflowRecords")
+              .where("createdBy", "==", email)
+              .get();
+          }
+
+          const records = snap.docs
+            .map((doc) => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => Number(b.updatedAtMs || 0) - Number(a.updatedAtMs || 0));
+
+          if (!records.length) return;
+
+          records.forEach((record) => {
+            const item = document.createElement("div");
+            item.className = "mf-saved-item";
+
+            const head = document.createElement("div");
+            head.className = "mf-saved-head";
+
+            const name = document.createElement("div");
+            name.className = "mf-saved-name";
+            name.textContent = record.name || "Cashflow Record";
+
+            const editBtn = document.createElement("button");
+            editBtn.type = "button";
+            editBtn.className = "mf-edit-btn";
+            editBtn.textContent = "Edit";
+            editBtn.addEventListener("click", () => {
+              populateCashflowFromRecord(record);
+              setCashflowEditMode(record.id);
+            });
+
+            head.appendChild(name);
+            head.appendChild(editBtn);
+
+            const meta = document.createElement("div");
+            meta.className = "mf-saved-meta";
+            meta.textContent = `Income: ${formatCurrency(Number(record.totalIncome || 0))} | Outflow: ${formatCurrency(Number(record.totalOutflow || 0))} | Left: ${formatCurrency(Number(record.leftover || 0))}`;
+
+            item.appendChild(head);
+            item.appendChild(meta);
+            list.appendChild(item);
+          });
+        } catch (error) {
+          console.error("Error loading cashflow records:", error);
+        }
       }
 
       $("calcSipBtn").addEventListener("click", () => {
@@ -2699,6 +3055,151 @@
         $("lumpsumMaturity").textContent = formatCurrency(maturity);
         $("lumpsumResults").classList.add("show");
       });
+
+      function addMoneyRow(containerId, labelPrefix) {
+        const container = $(containerId);
+        const nextIndex = container.children.length + 1;
+        const row = createMoneyRowElement(`${labelPrefix} ${nextIndex}`);
+        container.appendChild(row);
+      }
+
+      function getMoneyRowsTotal(containerId) {
+        let total = 0;
+        const rows = $(containerId).querySelectorAll(".mf-money-row");
+
+        for (const row of rows) {
+          const amountInput = row.querySelector(".mf-money-input");
+          if (!amountInput) continue;
+
+          const raw = amountInput.value.trim();
+          if (!raw) continue;
+
+          const amount = parseNonNegativeNumber(raw);
+          if (!Number.isFinite(amount)) return Number.NaN;
+          total += amount;
+        }
+
+        return total;
+      }
+
+      $("addIncomeBtn").addEventListener("click", () => {
+        addMoneyRow("incomeRows", "Income");
+      });
+
+      $("addCardBillBtn").addEventListener("click", () => {
+        addMoneyRow("cardBillRows", "Bill");
+      });
+
+      $("addExpenseBtn").addEventListener("click", () => {
+        addMoneyRow("expenseRows", "Expense");
+      });
+
+      $("calcLeftoverBtn").addEventListener("click", () => {
+        const totals = getCashflowTotals();
+        if (!totals) {
+          alert("Please enter valid non-negative numbers in cashflow rows.");
+          return;
+        }
+
+        renderCashflowTotals(totals);
+      });
+
+      $("saveCashflowBtn").addEventListener("click", async () => {
+        if (!window.auth.currentUser) {
+          alert("Please sign in to save cashflow records.");
+          return;
+        }
+
+        const totals = getCashflowTotals();
+        if (!totals) {
+          alert("Please enter valid non-negative numbers before saving.");
+          return;
+        }
+
+        const incomes = collectMoneyRows("incomeRows", "Income");
+        const cardBills = collectMoneyRows("cardBillRows", "Bill");
+        const otherExpenses = collectMoneyRows("expenseRows", "Expense");
+        if (!incomes.length && !cardBills.length && !otherExpenses.length) {
+          alert("Add at least one income, bill, or expense amount before saving.");
+          return;
+        }
+
+        const recordName = $("cashflowRecordName").value.trim() || "Cashflow Record";
+        const nowMs = Date.now();
+
+        const payload = {
+          name: recordName,
+          incomes,
+          cardBills,
+          otherExpenses,
+          totalIncome: totals.incomeTotal,
+          totalOutflow: totals.outflow,
+          leftover: totals.leftover,
+          updatedAtMs: nowMs,
+          createdBy: window.auth.currentUser.uid,
+          createdByEmail: window.auth.currentUser.email || "",
+        };
+
+        try {
+          if (currentCashflowRecordStore === "local") {
+            if (!payload.createdAtMs) payload.createdAtMs = nowMs;
+            currentCashflowRecordId = upsertLocalCashflowRecord(
+              payload,
+              currentCashflowRecordId,
+              window.auth.currentUser.uid,
+            );
+          } else if (currentCashflowRecordId) {
+            try {
+              await window.db
+                .collection("cashflowRecords")
+                .doc(currentCashflowRecordId)
+                .update(payload);
+            } catch (updateError) {
+              if (isPermissionDeniedError(updateError)) {
+                if (!payload.createdAtMs) payload.createdAtMs = nowMs;
+                currentCashflowRecordId = upsertLocalCashflowRecord(
+                  payload,
+                  null,
+                  window.auth.currentUser.uid,
+                );
+                currentCashflowRecordStore = "local";
+              } else {
+                payload.createdAtMs = nowMs;
+                const ref = await window.db.collection("cashflowRecords").add(payload);
+                currentCashflowRecordId = ref.id;
+                currentCashflowRecordStore = "cloud";
+              }
+            }
+          } else {
+            payload.createdAtMs = nowMs;
+            try {
+              const ref = await window.db.collection("cashflowRecords").add(payload);
+              currentCashflowRecordId = ref.id;
+              currentCashflowRecordStore = "cloud";
+            } catch (createError) {
+              if (!isPermissionDeniedError(createError)) throw createError;
+              currentCashflowRecordId = upsertLocalCashflowRecord(
+                payload,
+                null,
+                window.auth.currentUser.uid,
+              );
+              currentCashflowRecordStore = "local";
+            }
+          }
+
+          setCashflowEditMode(currentCashflowRecordId, currentCashflowRecordStore);
+          await loadCashflowRecords();
+        } catch (error) {
+          console.error("Error saving cashflow record:", error);
+          const message = error && error.message ? error.message : "Unknown error";
+          alert(`Failed to save cashflow record. ${message}`);
+        }
+      });
+
+      addMoneyRow("incomeRows", "Income");
+      addMoneyRow("cardBillRows", "Bill");
+      addMoneyRow("expenseRows", "Expense");
+      setCashflowEditMode(null);
 
       function formatDateForNote(date) {
         return date.toLocaleDateString("en-IN", {

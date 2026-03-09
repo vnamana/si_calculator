@@ -1169,6 +1169,12 @@
       const HISTORY_SORT_KEY = "simple-interest-history-sort-v1";
       const SUMMARY_SORT_KEY = "simple-interest-summary-sort-v1";
       const SUMMARY_COLUMNS_KEY = "simple-interest-summary-columns-v1";
+      const SUMMARY_COLUMN_DEFAULTS = {
+        startDate: false,
+        endDate: false,
+        maturity: false,
+        rate: false,
+      };
       const SUMMARY_BASE_COLUMNS = [
         "note",
         "principal",
@@ -1299,32 +1305,73 @@
         localStorage.setItem(SUMMARY_SORT_KEY, JSON.stringify(state));
       }
 
-      function getSummaryColumnConfig() {
-        const fallback = {
-          startDate: false,
-          endDate: false,
-          maturity: true,
-          rate: true,
+      function normalizeSummaryColumnConfig(rawConfig) {
+        const config = rawConfig || {};
+        return {
+          startDate: Boolean(config.startDate),
+          endDate: Boolean(config.endDate),
+          maturity: Boolean(config.maturity),
+          rate: Boolean(config.rate),
         };
+      }
+
+      async function saveSummaryColumnConfigToDb(config) {
+        try {
+          if (!window.auth.currentUser) return;
+          await window.db
+            .collection("userPreferences")
+            .doc(window.auth.currentUser.uid)
+            .set(
+              {
+                summaryColumns: config,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            );
+        } catch (error) {
+          console.error("Error saving summary column preferences:", error);
+        }
+      }
+
+      async function loadSummaryColumnConfigFromDb() {
+        try {
+          if (!window.auth.currentUser) return null;
+          const snap = await window.db
+            .collection("userPreferences")
+            .doc(window.auth.currentUser.uid)
+            .get();
+          if (!snap.exists) return null;
+          const data = snap.data() || {};
+          if (!data.summaryColumns) return null;
+          return normalizeSummaryColumnConfig(data.summaryColumns);
+        } catch (error) {
+          console.error("Error loading summary column preferences:", error);
+          return null;
+        }
+      }
+
+      function getSummaryColumnConfig() {
+        const fallback = { ...SUMMARY_COLUMN_DEFAULTS };
         try {
           const stored = JSON.parse(
             localStorage.getItem(SUMMARY_COLUMNS_KEY) || "null",
           );
           if (!stored || typeof stored !== "object") return fallback;
 
-          return {
-            startDate: Boolean(stored.startDate),
-            endDate: Boolean(stored.endDate),
-            maturity: stored.maturity !== false,
-            rate: stored.rate !== false,
-          };
+          return normalizeSummaryColumnConfig(stored);
         } catch (error) {
           return fallback;
         }
       }
 
-      function setSummaryColumnConfig(config) {
-        localStorage.setItem(SUMMARY_COLUMNS_KEY, JSON.stringify(config));
+      function setSummaryColumnConfig(config, options = {}) {
+        const normalized = normalizeSummaryColumnConfig(config);
+        localStorage.setItem(SUMMARY_COLUMNS_KEY, JSON.stringify(normalized));
+
+        const shouldPersistRemote = options.persistRemote !== false;
+        if (shouldPersistRemote) {
+          saveSummaryColumnConfigToDb(normalized);
+        }
       }
 
       function getVisibleSummaryColumns() {
@@ -2551,9 +2598,13 @@
         }
       });
 
-      window.auth.onAuthStateChanged((user) => {
+      window.auth.onAuthStateChanged(async (user) => {
         const signOutBtn = document.getElementById("signOutBtn");
         if (user) {
+          const dbConfig = await loadSummaryColumnConfigFromDb();
+          if (dbConfig) {
+            setSummaryColumnConfig(dbConfig, { persistRemote: false });
+          }
           showCalculator();
           if (signOutBtn) {
             signOutBtn.style.display = "block";

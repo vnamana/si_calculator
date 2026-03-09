@@ -30,10 +30,10 @@
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         min-height: 100vh;
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
         background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-        padding: 20px;
+        padding: 12px;
       }
 
       #authSection {
@@ -54,6 +54,59 @@
         padding: 40px;
         width: 100%;
         max-width: 560px;
+        margin: 0 auto;
+      }
+
+      .calculator.app-shell {
+        max-width: 1020px;
+      }
+
+      .site-nav {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 14px 0 18px;
+      }
+
+      .site-nav-btn {
+        border: 1px solid #2c5364;
+        background: #fff;
+        color: #2c5364;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 0.88rem;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      .site-nav-btn.active {
+        background: #2c5364;
+        color: #fff;
+      }
+
+      .app-page {
+        display: none;
+      }
+
+      .app-page.active {
+        display: block;
+      }
+
+      #calculatorPage {
+        width: 100%;
+        max-width: 560px;
+        margin: 0 auto;
+      }
+
+      #notesPage,
+      #sessionPage {
+        width: 100%;
+      }
+
+      #sessionPage .history,
+      #notesPage .history-summary {
+        margin-top: 0;
       }
 
       .calculator h1 {
@@ -294,8 +347,8 @@
         list-style: none;
         display: grid;
         gap: 10px;
-        max-height: 360px;
-        overflow: auto;
+        max-height: none;
+        overflow: visible;
         padding-right: 4px;
       }
 
@@ -460,6 +513,28 @@
         border-bottom: 1px solid #d8e8ee;
       }
 
+      .history-summary-head-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .history-summary-columns {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.72rem;
+        font-weight: 600;
+      }
+
+      .history-summary-col-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+      }
+
       .history-summary-toggle {
         border: 1px solid #2c5364;
         background: #fff;
@@ -498,28 +573,24 @@
         color: #2c5364;
       }
 
-      .history-summary-table th:nth-child(1),
-      .history-summary-table td:nth-child(1) {
-        width: 22%;
+      .history-summary-table .summary-col-note {
+        width: 16%;
       }
 
-      .history-summary-table th:nth-child(2),
-      .history-summary-table td:nth-child(2),
-      .history-summary-table th:nth-child(3),
-      .history-summary-table td:nth-child(3) {
-        width: 15%;
+      .history-summary-table .summary-col-principal,
+      .history-summary-table .summary-col-maturity {
+        width: 13%;
       }
 
-      .history-summary-table th:nth-child(4),
-      .history-summary-table td:nth-child(4) {
+      .history-summary-table .summary-col-rate {
+        width: 10%;
+      }
+
+      .history-summary-table .summary-col-startDate,
+      .history-summary-table .summary-col-endDate,
+      .history-summary-table .summary-col-interestDate,
+      .history-summary-table .summary-col-interestAmount {
         width: 12%;
-      }
-
-      .history-summary-table th:nth-child(5),
-      .history-summary-table td:nth-child(5),
-      .history-summary-table th:nth-child(6),
-      .history-summary-table td:nth-child(6) {
-        width: 14%;
       }
 
       .history-summary-note {
@@ -568,6 +639,12 @@
         border-bottom: none;
       }
 
+      .history-summary-total-row td {
+        font-weight: 700;
+        background: #f3f9fc;
+        border-top: 1px solid #d8e8ee;
+      }
+
       /* mobile-specific layout adjustments */
       @media (max-width: 550px) {
         body {
@@ -580,6 +657,18 @@
           padding: 12px;
           max-width: 100vw;
           border-radius: 12px;
+        }
+
+        .site-nav {
+          gap: 6px;
+        }
+
+        .site-nav-btn {
+          flex: 1;
+          min-width: 96px;
+          text-align: center;
+          padding: 8px 10px;
+          font-size: 0.8rem;
         }
 
         .calculator h1 {
@@ -673,11 +762,10 @@
           width: 100%;
           justify-content: space-between;
         }
-        /* make summary section span full screen width */
         .history-summary {
-          width: calc(100% + 24px);
-          margin-left: -12px;
-          margin-right: -12px;
+          width: 100%;
+          margin-left: 0;
+          margin-right: 0;
         }
       }
     </style>
@@ -696,7 +784,7 @@
       ></p>
     </div>
 
-    <div class="calculator" style="display: none">
+    <div class="calculator app-shell" style="display: none">
       <h1>Simple Interest Rate Calculator</h1>
       <button
         id="signOutBtn"
@@ -705,114 +793,28 @@
       >
         Sign out
       </button>
-      <div class="form-group">
-        <label for="principal">Principal Amount (₹)</label>
-        <input
-          type="number"
-          id="principal"
-          placeholder="100000"
-          min="0"
-          step="any"
-        />
-      </div>
+      <nav class="site-nav" aria-label="Site navigation">
+        <button class="site-nav-btn active" id="navNotesBtn" data-page="notesPage" type="button">Home / Notes</button>
+        <button class="site-nav-btn" id="navSessionBtn" data-page="sessionPage" type="button">Session Notes</button>
+        <button class="site-nav-btn" id="navCalculatorBtn" data-page="calculatorPage" type="button">Calculator</button>
+      </nav>
 
-      <div class="form-group">
-        <label for="maturity">Maturity Amount (₹)</label>
-        <input
-          type="number"
-          id="maturity"
-          placeholder="115000"
-          min="0"
-          step="any"
-        />
-      </div>
-
-      <div class="form-group">
-        <label for="quantity">Quantity (Multiplier)</label>
-        <input type="number" id="quantity" value="1" min="1" step="1" />
-      </div>
-
-      <div class="date-row">
-        <div class="form-group">
-          <label for="startDate">Start Date</label>
-          <div class="date-inputs">
-            <input type="date" id="startDate" />
-            <input
-              type="text"
-              id="startDateText"
-              placeholder="YYYY-MM-DD or DD/MM/YYYY"
-              inputmode="numeric"
-            />
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="endDate">End Date</label>
-          <div class="date-inputs">
-            <input type="date" id="endDate" />
-            <input
-              type="text"
-              id="endDateText"
-              placeholder="YYYY-MM-DD or DD/MM/YYYY"
-              inputmode="numeric"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div class="date-row">
-        <div class="form-group">
-          <label for="interestDate">Interest Date</label>
-          <input type="date" id="interestDate" />
-        </div>
-        <div class="form-group">
-          <label for="interestAmountRs">Interest Amount (Rs)</label>
-          <input
-            type="number"
-            id="interestAmountRs"
-            placeholder="15000"
-            min="0"
-            step="any"
-          />
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="noteName">Note Name (optional)</label>
-        <input type="text" id="noteName" placeholder="e.g. My Notes" />
-      </div>
-
-      <div class="error-msg" id="errorMsg"></div>
-
-      <button class="btn" id="calcBtn">Calculate Interest Rate</button>
-
-      <div class="history" id="historySection">
-        <div class="history-head">
-          <h3>Session Notes</h3>
-          <div class="history-controls">
-            <select
-              class="history-sort"
-              id="historySort"
-              aria-label="Sort notes"
-            >
-              <option value="manual">Manual</option>
-              <option value="rate-desc">SI ↓</option>
-              <option value="rate-asc">SI ↑</option>
-            </select>
-            <button class="history-toggle" id="toggleHistoryBtn" type="button">
-              Hide
-            </button>
-          </div>
-        </div>
-        <ul class="history-list" id="historyList"></ul>
-        <p class="history-empty" id="historyEmpty">
-          No saved calculations yet.
-        </p>
-        <button class="btn secondary" id="clearHistoryBtn" type="button">
-          Delete All Notes
-        </button>
+      <section class="app-page active" id="notesPage">
         <div class="history-summary" id="historySummary">
           <div class="history-summary-head">
-            <span>Notes Summary</span>
+            <div class="history-summary-head-left">
+              <span>Notes Summary</span>
+              <div class="history-summary-columns">
+                <label class="history-summary-col-toggle" for="summaryShowStartDate">
+                  <input type="checkbox" id="summaryShowStartDate" />
+                  <span>Start Date</span>
+                </label>
+                <label class="history-summary-col-toggle" for="summaryShowEndDate">
+                  <input type="checkbox" id="summaryShowEndDate" />
+                  <span>End Date</span>
+                </label>
+              </div>
+            </div>
             <button
               class="history-summary-toggle"
               id="summaryToggleBtn"
@@ -824,52 +826,156 @@
           <div class="history-summary-scroll">
             <table class="history-summary-table">
               <thead>
-                <tr>
-                  <th data-sort-key="note">Note</th>
-                  <th data-sort-key="principal">Principal</th>
-                  <th data-sort-key="maturity">Maturity</th>
-                  <th data-sort-key="rate">SI Rate</th>
-                  <th data-sort-key="interestDate">Interest Date</th>
-                  <th data-sort-key="interestAmount">Interest Amt (Rs)</th>
-                </tr>
+                <tr id="historySummaryHeadRow"></tr>
               </thead>
               <tbody id="historySummaryBody"></tbody>
             </table>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="results" id="results">
-        <h2>Results</h2>
-        <div class="result-row">
-          <span class="label">Principal (P)</span>
-          <span class="value" id="resPrincipal">—</span>
+      <section class="app-page" id="sessionPage">
+        <div class="history" id="historySection">
+          <div class="history-head">
+            <h3>Session Notes</h3>
+            <div class="history-controls">
+              <select
+                class="history-sort"
+                id="historySort"
+                aria-label="Sort notes"
+              >
+                <option value="manual">Manual</option>
+                <option value="rate-desc">SI ↓</option>
+                <option value="rate-asc">SI ↑</option>
+              </select>
+              <button class="history-toggle" id="toggleHistoryBtn" type="button">
+                Hide
+              </button>
+            </div>
+          </div>
+          <ul class="history-list" id="historyList"></ul>
+          <p class="history-empty" id="historyEmpty">
+            No saved calculations yet.
+          </p>
+          <button class="btn secondary" id="clearHistoryBtn" type="button">
+            Delete All Notes
+          </button>
         </div>
-        <div class="result-row">
-          <span class="label">Maturity Amount (A)</span>
-          <span class="value" id="resMaturity">—</span>
-        </div>
-        <div class="result-row">
-          <span class="label">Interest Earned</span>
-          <span class="value" id="resInterest">—</span>
-        </div>
-        <div class="result-row">
-          <span class="label">Quantity</span>
-          <span class="value" id="resQuantity">—</span>
-        </div>
-        <div class="result-row">
-          <span class="label">Duration</span>
-          <span class="value" id="resDuration">—</span>
-        </div>
-        <div class="result-row">
-          <span class="label">Annual Interest Rate</span>
-          <span class="value rate" id="resRate">—</span>
-        </div>
-      </div>
+      </section>
 
-      <button class="btn secondary" id="saveCalcBtn" style="display: none">
-        Save as Note
-      </button>
+      <section class="app-page" id="calculatorPage">
+        <div class="form-group">
+          <label for="principal">Principal Amount (₹)</label>
+          <input
+            type="number"
+            id="principal"
+            placeholder="100000"
+            min="0"
+            step="any"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="maturity">Maturity Amount (₹)</label>
+          <input
+            type="number"
+            id="maturity"
+            placeholder="115000"
+            min="0"
+            step="any"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="quantity">Quantity (Multiplier)</label>
+          <input type="number" id="quantity" value="1" min="1" step="1" />
+        </div>
+
+        <div class="date-row">
+          <div class="form-group">
+            <label for="startDate">Start Date</label>
+            <div class="date-inputs">
+              <input type="date" id="startDate" />
+              <input
+                type="text"
+                id="startDateText"
+                placeholder="YYYY-MM-DD or DD/MM/YYYY"
+                inputmode="numeric"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="endDate">End Date</label>
+            <div class="date-inputs">
+              <input type="date" id="endDate" />
+              <input
+                type="text"
+                id="endDateText"
+                placeholder="YYYY-MM-DD or DD/MM/YYYY"
+                inputmode="numeric"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="date-row">
+          <div class="form-group">
+            <label for="interestDate">Interest Date</label>
+            <input type="date" id="interestDate" />
+          </div>
+          <div class="form-group">
+            <label for="interestAmountRs">Interest Amount (Rs)</label>
+            <input
+              type="number"
+              id="interestAmountRs"
+              placeholder="15000"
+              min="0"
+              step="any"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="noteName">Note Name (optional)</label>
+          <input type="text" id="noteName" placeholder="e.g. My Notes" />
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <button class="btn" id="calcBtn">Calculate Interest Rate</button>
+
+        <div class="results" id="results">
+          <h2>Results</h2>
+          <div class="result-row">
+            <span class="label">Principal (P)</span>
+            <span class="value" id="resPrincipal">—</span>
+          </div>
+          <div class="result-row">
+            <span class="label">Maturity Amount (A)</span>
+            <span class="value" id="resMaturity">—</span>
+          </div>
+          <div class="result-row">
+            <span class="label">Interest Earned</span>
+            <span class="value" id="resInterest">—</span>
+          </div>
+          <div class="result-row">
+            <span class="label">Quantity</span>
+            <span class="value" id="resQuantity">—</span>
+          </div>
+          <div class="result-row">
+            <span class="label">Duration</span>
+            <span class="value" id="resDuration">—</span>
+          </div>
+          <div class="result-row">
+            <span class="label">Annual Interest Rate</span>
+            <span class="value rate" id="resRate">—</span>
+          </div>
+        </div>
+
+        <button class="btn secondary" id="saveCalcBtn" style="display: none">
+          Save as Note
+        </button>
+      </section>
     </div>
 
     <script>
@@ -923,14 +1029,35 @@
       let currentCalcData = null;
       const HISTORY_SORT_KEY = "simple-interest-history-sort-v1";
       const SUMMARY_SORT_KEY = "simple-interest-summary-sort-v1";
-      const SUMMARY_SORT_COLUMNS = new Set([
+      const SUMMARY_COLUMNS_KEY = "simple-interest-summary-columns-v1";
+      const SUMMARY_BASE_COLUMNS = [
         "note",
         "principal",
         "maturity",
         "rate",
         "interestDate",
         "interestAmount",
+      ];
+      const SUMMARY_SORT_COLUMNS = new Set([
+        "note",
+        "principal",
+        "maturity",
+        "rate",
+        "startDate",
+        "endDate",
+        "interestDate",
+        "interestAmount",
       ]);
+      const SUMMARY_COLUMN_LABELS = {
+        note: "Note",
+        principal: "Principal",
+        maturity: "Maturity",
+        rate: "SI Rate",
+        startDate: "Start Date",
+        endDate: "End Date",
+        interestDate: "Interest Date",
+        interestAmount: "Interest Amt (Rs)",
+      };
 
       function parseCurrencyText(value) {
         if (typeof value === "number") return value;
@@ -1035,6 +1162,61 @@
         localStorage.setItem(SUMMARY_SORT_KEY, JSON.stringify(state));
       }
 
+      function getSummaryColumnConfig() {
+        const fallback = { startDate: false, endDate: false };
+        try {
+          const stored = JSON.parse(
+            localStorage.getItem(SUMMARY_COLUMNS_KEY) || "null",
+          );
+          if (!stored || typeof stored !== "object") return fallback;
+
+          return {
+            startDate: Boolean(stored.startDate),
+            endDate: Boolean(stored.endDate),
+          };
+        } catch (error) {
+          return fallback;
+        }
+      }
+
+      function setSummaryColumnConfig(config) {
+        localStorage.setItem(SUMMARY_COLUMNS_KEY, JSON.stringify(config));
+      }
+
+      function getVisibleSummaryColumns() {
+        const config = getSummaryColumnConfig();
+        const columns = [...SUMMARY_BASE_COLUMNS];
+        const insertAt = 4;
+
+        if (config.startDate) {
+          columns.splice(insertAt, 0, "startDate");
+        }
+        if (config.endDate) {
+          columns.splice(insertAt + (config.startDate ? 1 : 0), 0, "endDate");
+        }
+
+        return columns;
+      }
+
+      function syncSummaryColumnControls() {
+        const config = getSummaryColumnConfig();
+        $("summaryShowStartDate").checked = config.startDate;
+        $("summaryShowEndDate").checked = config.endDate;
+      }
+
+      function renderSummaryHeaders(columns) {
+        const headRow = $("historySummaryHeadRow");
+        headRow.innerHTML = "";
+
+        columns.forEach((column) => {
+          const th = document.createElement("th");
+          th.dataset.sortKey = column;
+          th.className = `summary-col-${column}`;
+          th.textContent = SUMMARY_COLUMN_LABELS[column] || column;
+          headRow.appendChild(th);
+        });
+      }
+
       function updateSummarySortHeaders(state) {
         const summaryTable = document.querySelector(".history-summary-table");
         if (!summaryTable) return;
@@ -1094,6 +1276,16 @@
           } else if (state.column === "rate") {
             aValue = parseRatePercent(a.entry.rate);
             bValue = parseRatePercent(b.entry.rate);
+          } else if (state.column === "startDate") {
+            const aDate = parseStoredNoteDate(a.entry.rawStartDate || a.entry.startDate);
+            const bDate = parseStoredNoteDate(b.entry.rawStartDate || b.entry.startDate);
+            aValue = aDate ? aDate.getTime() : Number.NaN;
+            bValue = bDate ? bDate.getTime() : Number.NaN;
+          } else if (state.column === "endDate") {
+            const aDate = parseStoredNoteDate(a.entry.rawEndDate || a.entry.endDate);
+            const bDate = parseStoredNoteDate(b.entry.rawEndDate || b.entry.endDate);
+            aValue = aDate ? aDate.getTime() : Number.NaN;
+            bValue = bDate ? bDate.getTime() : Number.NaN;
           } else if (state.column === "interestDate") {
             const aDate = parseStoredNoteDate(a.entry.rawInterestDate || a.entry.interestDate);
             const bDate = parseStoredNoteDate(b.entry.rawInterestDate || b.entry.interestDate);
@@ -1376,7 +1568,12 @@
         const historyEmpty = $("historyEmpty");
         const historySummary = $("historySummary");
         const historySummaryBody = $("historySummaryBody");
-        const summarySortState = getSummarySortState();
+        const summaryColumns = getVisibleSummaryColumns();
+        let summarySortState = getSummarySortState();
+        if (summarySortState.column && !summaryColumns.includes(summarySortState.column)) {
+          summarySortState = { column: null, direction: "asc" };
+          setSummarySortState(summarySortState);
+        }
         const entries = await loadHistory();
         const sortMode = getHistorySortMode();
         const displayEntries = sortHistoryEntries(entries, sortMode);
@@ -1384,6 +1581,7 @@
 
         historyList.innerHTML = "";
         historySummaryBody.innerHTML = "";
+        renderSummaryHeaders(summaryColumns);
         updateSummarySortHeaders(summarySortState);
 
         if (!displayEntries.length) {
@@ -1394,6 +1592,12 @@
 
         historyEmpty.style.display = "none";
         historySummary.style.display = "block";
+
+        let totalPrincipal = 0;
+        let totalMaturity = 0;
+        let totalInterestAmount = 0;
+        let weightedRateNumerator = 0;
+        let weightedRateDenominator = 0;
 
         displayEntries.forEach((entry, index) => {
           const scaled = computeScaledAmounts(
@@ -1633,49 +1837,94 @@
           historyList.appendChild(item);
 
           summaryRowsData.push({ entry, scaled });
+
+          totalPrincipal += scaled.principal;
+          totalMaturity += scaled.maturity;
+
+          if (Number.isFinite(entry.interestAmountRs)) {
+            totalInterestAmount += entry.interestAmountRs;
+          }
+
+          const entryRate = parseRatePercent(entry.rate);
+          if (Number.isFinite(entryRate) && Number.isFinite(scaled.principal)) {
+            weightedRateNumerator += entryRate * scaled.principal;
+            weightedRateDenominator += scaled.principal;
+          }
         });
 
         sortSummaryEntries(summaryRowsData, summarySortState).forEach(
           ({ entry, scaled }) => {
             const summaryRow = document.createElement("tr");
 
-            const noteCell = document.createElement("td");
-            const noteText = document.createElement("div");
-            noteText.className = "history-summary-note";
-            noteText.textContent = entry.noteName || "Untitled note";
-            noteCell.appendChild(noteText);
-            summaryRow.appendChild(noteCell);
+            summaryColumns.forEach((column) => {
+              const cell = document.createElement("td");
+              cell.className = `summary-col-${column}`;
 
-            const principalCell = document.createElement("td");
-            principalCell.textContent = formatCurrencyNoDecimals(
-              scaled.principal,
-            );
-            summaryRow.appendChild(principalCell);
+              if (column === "note") {
+                const noteText = document.createElement("div");
+                noteText.className = "history-summary-note";
+                noteText.textContent = entry.noteName || "Untitled note";
+                cell.appendChild(noteText);
+              } else if (column === "principal") {
+                cell.textContent = formatCurrencyNoDecimals(scaled.principal);
+              } else if (column === "maturity") {
+                cell.textContent = formatCurrencyNoDecimals(scaled.maturity);
+              } else if (column === "rate") {
+                const summaryRate = parseRatePercent(entry.rate);
+                cell.textContent = Number.isFinite(summaryRate)
+                  ? `${summaryRate.toFixed(2)}%`
+                  : "—";
+              } else if (column === "startDate") {
+                cell.textContent = entry.startDate || "—";
+              } else if (column === "endDate") {
+                cell.textContent = entry.endDate || "—";
+              } else if (column === "interestDate") {
+                cell.textContent = entry.interestDate || "—";
+              } else if (column === "interestAmount") {
+                cell.textContent = Number.isFinite(entry.interestAmountRs)
+                  ? formatCurrencyNoDecimals(entry.interestAmountRs)
+                  : "—";
+              }
 
-            const maturityCell = document.createElement("td");
-            maturityCell.textContent = formatCurrencyNoDecimals(scaled.maturity);
-            summaryRow.appendChild(maturityCell);
-
-            const rateCell = document.createElement("td");
-            const summaryRate = parseRatePercent(entry.rate);
-            rateCell.textContent = Number.isFinite(summaryRate)
-              ? `${summaryRate.toFixed(2)}%`
-              : "—";
-            summaryRow.appendChild(rateCell);
-
-            const interestDateCell = document.createElement("td");
-            interestDateCell.textContent = entry.interestDate || "—";
-            summaryRow.appendChild(interestDateCell);
-
-            const interestAmountCell = document.createElement("td");
-            interestAmountCell.textContent = Number.isFinite(entry.interestAmountRs)
-              ? formatCurrencyNoDecimals(entry.interestAmountRs)
-              : "—";
-            summaryRow.appendChild(interestAmountCell);
+              summaryRow.appendChild(cell);
+            });
 
             historySummaryBody.appendChild(summaryRow);
           },
         );
+
+        const totalRow = document.createElement("tr");
+        totalRow.className = "history-summary-total-row";
+
+        const weightedRate =
+          weightedRateDenominator > 0
+            ? weightedRateNumerator / weightedRateDenominator
+            : Number.NaN;
+
+        summaryColumns.forEach((column) => {
+          const cell = document.createElement("td");
+          cell.className = `summary-col-${column}`;
+
+          if (column === "note") {
+            cell.textContent = "Total/Wt. Avg.";
+          } else if (column === "principal") {
+            cell.textContent = formatCurrencyNoDecimals(totalPrincipal);
+          } else if (column === "maturity") {
+            cell.textContent = formatCurrencyNoDecimals(totalMaturity);
+          } else if (column === "rate") {
+            cell.textContent = Number.isFinite(weightedRate)
+              ? `${weightedRate.toFixed(2)}%`
+              : "—";
+          } else if (column === "interestAmount") {
+            cell.textContent = formatCurrencyNoDecimals(totalInterestAmount);
+          } else {
+            cell.textContent = "—";
+          }
+
+          totalRow.appendChild(cell);
+        });
+
+        historySummaryBody.appendChild(totalRow);
       }
 
       async function updateHistoryNoteText(entryId, noteText) {
@@ -1913,6 +2162,16 @@
         toggle.textContent = isCollapsed ? "Show" : "Hide";
       }
 
+      function setActivePage(pageId) {
+        document.querySelectorAll(".app-page").forEach((page) => {
+          page.classList.toggle("active", page.id === pageId);
+        });
+
+        document.querySelectorAll(".site-nav-btn").forEach((button) => {
+          button.classList.toggle("active", button.dataset.page === pageId);
+        });
+      }
+
       const todayIso = toIsoDate(new Date());
       if (!$("startDate").value && !$("startDateText").value) {
         $("startDate").value = todayIso;
@@ -1993,27 +2252,53 @@
       });
 
       document
-        .querySelectorAll(".history-summary-table th[data-sort-key]")
-        .forEach((header) => {
-          header.addEventListener("click", () => {
-            const column = header.dataset.sortKey;
-            const currentState = getSummarySortState();
-            const direction =
-              currentState.column === column && currentState.direction === "asc"
-                ? "desc"
-                : "asc";
+        .querySelector(".history-summary-table thead")
+        .addEventListener("click", (event) => {
+          const header = event.target.closest("th[data-sort-key]");
+          if (!header) return;
 
-            setSummarySortState({ column, direction });
-            renderHistory();
-          });
+          const column = header.dataset.sortKey;
+          const currentState = getSummarySortState();
+
+          if (currentState.column !== column) {
+            setSummarySortState({ column, direction: "asc" });
+          } else if (currentState.direction === "asc") {
+            setSummarySortState({ column, direction: "desc" });
+          } else {
+            setSummarySortState({ column: null, direction: "asc" });
+          }
+
+          renderHistory();
         });
 
+      $("summaryShowStartDate").addEventListener("change", () => {
+        const config = getSummaryColumnConfig();
+        config.startDate = $("summaryShowStartDate").checked;
+        setSummaryColumnConfig(config);
+        renderHistory();
+      });
+
+      $("summaryShowEndDate").addEventListener("change", () => {
+        const config = getSummaryColumnConfig();
+        config.endDate = $("summaryShowEndDate").checked;
+        setSummaryColumnConfig(config);
+        renderHistory();
+      });
+
+      document.querySelectorAll(".site-nav-btn").forEach((button) => {
+        button.addEventListener("click", () => {
+          setActivePage(button.dataset.page);
+        });
+      });
+
       $("historySort").value = getHistorySortMode();
+      syncSummaryColumnControls();
 
       // Authentication helpers
       function showCalculator() {
         document.getElementById("authSection").style.display = "none";
         document.querySelector(".calculator").style.display = "block";
+        setActivePage("notesPage");
         renderHistory();
       }
 
@@ -2094,7 +2379,7 @@
       (async () => {
         await renderHistory();
       })();
-      setHistoryCollapsed(true);
+      setHistoryCollapsed(false);
 
       function durationText(days) {
         const years = Math.floor(days / 365);

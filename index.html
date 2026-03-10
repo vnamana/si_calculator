@@ -399,6 +399,17 @@
         cursor: pointer;
       }
 
+      .mf-delete-btn {
+        border: 1px solid #d9534f;
+        background: #fff;
+        color: #d9534f;
+        border-radius: 6px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        padding: 4px 8px;
+        cursor: pointer;
+      }
+
       /* Results */
       .results {
         margin-top: 28px;
@@ -1481,9 +1492,17 @@
         };
       }
 
+      let summaryPrefsRemoteEnabled = true;
+
+      function isFirestorePermissionDenied(error) {
+        const code = error && error.code ? String(error.code) : "";
+        const message = error && error.message ? String(error.message) : "";
+        return code.includes("permission-denied") || /insufficient permissions/i.test(message);
+      }
+
       async function saveSummaryColumnConfigToDb(config) {
         try {
-          if (!window.auth.currentUser) return;
+          if (!window.auth.currentUser || !summaryPrefsRemoteEnabled) return;
           await window.db
             .collection("userPreferences")
             .doc(window.auth.currentUser.uid)
@@ -1495,6 +1514,10 @@
               { merge: true },
             );
         } catch (error) {
+          if (isFirestorePermissionDenied(error)) {
+            summaryPrefsRemoteEnabled = false;
+            return;
+          }
           console.error("Error saving summary column preferences:", error);
         }
       }
@@ -1509,8 +1532,13 @@
           if (!snap.exists) return null;
           const data = snap.data() || {};
           if (!data.summaryColumns) return null;
+          summaryPrefsRemoteEnabled = true;
           return normalizeSummaryColumnConfig(data.summaryColumns);
         } catch (error) {
+          if (isFirestorePermissionDenied(error)) {
+            summaryPrefsRemoteEnabled = false;
+            return null;
+          }
           console.error("Error loading summary column preferences:", error);
           return null;
         }
@@ -2935,13 +2963,30 @@
       function populateCashflowFromRecord(record) {
         $("cashflowRecordName").value = record.name || "";
         fillMoneyRows("incomeRows", "Income", record.incomes || []);
-        fillMoneyRows("cardBillRows", "Bill", record.cardBills || []);
-        fillMoneyRows("expenseRows", "Expense", record.otherExpenses || []);
+        fillMoneyRows("cardBillRows", "Bill", record.cardBills || record.bills || []);
+        fillMoneyRows("expenseRows", "Expense", record.otherExpenses || record.expenses || []);
         renderCashflowTotals({
           incomeTotal: Number(record.totalIncome || 0),
           outflow: Number(record.totalOutflow || 0),
           leftover: Number(record.leftover || 0),
         });
+      }
+
+      async function deleteCashflowRecord(recordId) {
+        if (!recordId) return;
+        if (!confirm("Delete this cashflow record?")) return;
+
+        try {
+          await window.db.collection("cashflowRecords").doc(recordId).delete();
+          if (currentCashflowRecordId === recordId) {
+            setCashflowEditMode(null);
+          }
+          await loadCashflowRecords();
+        } catch (error) {
+          console.error("Error deleting cashflow record:", error);
+          const message = error && error.message ? error.message : "Unknown error";
+          alert(`Failed to delete cashflow record. ${message}`);
+        }
       }
 
       async function loadCashflowRecords() {
@@ -2992,8 +3037,22 @@
               setCashflowEditMode(record.id);
             });
 
+            const deleteBtn = document.createElement("button");
+            deleteBtn.type = "button";
+            deleteBtn.className = "mf-delete-btn";
+            deleteBtn.textContent = "Delete";
+            deleteBtn.addEventListener("click", () => {
+              deleteCashflowRecord(record.id);
+            });
+
+            const actions = document.createElement("div");
+            actions.style.display = "flex";
+            actions.style.gap = "6px";
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+
             head.appendChild(name);
-            head.appendChild(editBtn);
+            head.appendChild(actions);
 
             const meta = document.createElement("div");
             meta.className = "mf-saved-meta";

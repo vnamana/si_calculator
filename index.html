@@ -3141,53 +3141,24 @@
         };
 
         try {
-          if (currentCashflowRecordStore === "local") {
-            if (!payload.createdAtMs) payload.createdAtMs = nowMs;
-            currentCashflowRecordId = upsertLocalCashflowRecord(
-              payload,
-              currentCashflowRecordId,
-              window.auth.currentUser.uid,
-            );
-          } else if (currentCashflowRecordId) {
+          if (currentCashflowRecordId) {
             try {
               await window.db
                 .collection("cashflowRecords")
                 .doc(currentCashflowRecordId)
                 .update(payload);
             } catch (updateError) {
-              if (isPermissionDeniedError(updateError)) {
-                if (!payload.createdAtMs) payload.createdAtMs = nowMs;
-                currentCashflowRecordId = upsertLocalCashflowRecord(
-                  payload,
-                  null,
-                  window.auth.currentUser.uid,
-                );
-                currentCashflowRecordStore = "local";
-              } else {
-                payload.createdAtMs = nowMs;
-                const ref = await window.db.collection("cashflowRecords").add(payload);
-                currentCashflowRecordId = ref.id;
-                currentCashflowRecordStore = "cloud";
-              }
+              payload.createdAtMs = nowMs;
+              const ref = await window.db.collection("cashflowRecords").add(payload);
+              currentCashflowRecordId = ref.id;
             }
           } else {
             payload.createdAtMs = nowMs;
-            try {
-              const ref = await window.db.collection("cashflowRecords").add(payload);
-              currentCashflowRecordId = ref.id;
-              currentCashflowRecordStore = "cloud";
-            } catch (createError) {
-              if (!isPermissionDeniedError(createError)) throw createError;
-              currentCashflowRecordId = upsertLocalCashflowRecord(
-                payload,
-                null,
-                window.auth.currentUser.uid,
-              );
-              currentCashflowRecordStore = "local";
-            }
+            const ref = await window.db.collection("cashflowRecords").add(payload);
+            currentCashflowRecordId = ref.id;
           }
 
-          setCashflowEditMode(currentCashflowRecordId, currentCashflowRecordStore);
+          setCashflowEditMode(currentCashflowRecordId);
           await loadCashflowRecords();
         } catch (error) {
           console.error("Error saving cashflow record:", error);

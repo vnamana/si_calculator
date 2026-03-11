@@ -499,6 +499,44 @@
         gap: 8px;
       }
 
+      .qty-sync-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: #2c5364;
+        white-space: nowrap;
+      }
+
+      .qty-sync-toggle input {
+        margin: 0;
+      }
+
+      .calc-qty-sync-row {
+        display: flex;
+        justify-content: center;
+      }
+
+      .form-group .qty-sync-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        margin: 0 auto;
+      }
+
+      .calc-action-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .calc-action-row .btn {
+        margin-top: 0;
+      }
+
       .history-sort {
         border: 1px solid #2c5364;
         border-radius: 6px;
@@ -1064,6 +1102,10 @@
                 <option value="rate-desc">SI ↓</option>
                 <option value="rate-asc">SI ↑</option>
               </select>
+              <label class="qty-sync-toggle" for="sessionQtySyncToggle">
+                <input type="checkbox" id="sessionQtySyncToggle" />
+                <span>Qty updates amt</span>
+              </label>
               <button class="history-toggle" id="toggleHistoryBtn" type="button">
                 Hide
               </button>
@@ -1110,6 +1152,13 @@
         <div class="form-group">
           <label for="quantity">Quantity (Multiplier)</label>
           <input type="number" id="quantity" value="1" min="1" step="1" />
+        </div>
+
+        <div class="form-group calc-qty-sync-row" style="margin-top: -8px; margin-bottom: 12px; text-align: center">
+          <label class="qty-sync-toggle" for="calcQtySyncToggle">
+            <input type="checkbox" id="calcQtySyncToggle" />
+            <span>Qty updates principal & maturity</span>
+          </label>
         </div>
 
         <div class="date-row">
@@ -1163,7 +1212,10 @@
 
         <div class="error-msg" id="errorMsg"></div>
 
-        <button class="btn" id="calcBtn">Calculate Interest Rate</button>
+        <div class="calc-action-row">
+          <button class="btn" id="calcBtn">Calculate Interest Rate</button>
+          <button class="btn secondary" id="clearCalcBtn" type="button">Clear</button>
+        </div>
 
         <div class="results" id="results">
           <h2>Results</h2>
@@ -1234,6 +1286,7 @@
           <button class="btn" id="calcLeftoverBtn" type="button">Calculate Net Balance</button>
           <div class="mf-action-row">
             <button class="btn secondary" id="saveCashflowBtn" type="button">Save Record</button>
+            <button class="btn secondary" id="clearCashflowBtn" type="button">Clear</button>
           </div>
           <div class="mf-results" id="leftoverResults">
             <div class="result-row"><span class="label">Total Income</span><span class="value" id="totalIncomeValue">—</span></div>
@@ -1259,7 +1312,10 @@
               <input type="number" id="sipYears" placeholder="6" min="0" step="any" />
             </div>
           </div>
-          <button class="btn" id="calcSipBtn" type="button">Calculate SIP Returns</button>
+          <div class="calc-action-row">
+            <button class="btn" id="calcSipBtn" type="button">Calculate SIP Returns</button>
+            <button class="btn secondary" id="clearSipBtn" type="button">Clear</button>
+          </div>
           <div class="mf-results" id="sipResults">
             <div class="result-row"><span class="label">Total Invested</span><span class="value" id="sipInvested">—</span></div>
             <div class="result-row"><span class="label">Estimated Returns</span><span class="value" id="sipGain">—</span></div>
@@ -1284,7 +1340,10 @@
               <input type="number" id="lumpsumYears" placeholder="6" min="0" step="any" />
             </div>
           </div>
-          <button class="btn" id="calcLumpsumBtn" type="button">Calculate Lumpsum Returns</button>
+          <div class="calc-action-row">
+            <button class="btn" id="calcLumpsumBtn" type="button">Calculate Lumpsum Returns</button>
+            <button class="btn secondary" id="clearLumpsumBtn" type="button">Clear</button>
+          </div>
           <div class="mf-results" id="lumpsumResults">
             <div class="result-row"><span class="label">Total Invested</span><span class="value" id="lumpsumInvested">—</span></div>
             <div class="result-row"><span class="label">Estimated Returns</span><span class="value" id="lumpsumGain">—</span></div>
@@ -1346,6 +1405,8 @@
       const HISTORY_SORT_KEY = "simple-interest-history-sort-v1";
       const SUMMARY_SORT_KEY = "simple-interest-summary-sort-v1";
       const SUMMARY_COLUMNS_KEY = "simple-interest-summary-columns-v1";
+      const CALC_QTY_SYNC_KEY = "simple-interest-calc-qty-sync-v1";
+      const SESSION_QTY_SYNC_KEY = "simple-interest-session-qty-sync-v1";
       const SUMMARY_COLUMN_DEFAULTS = {
         startDate: false,
         endDate: false,
@@ -1480,6 +1541,44 @@
 
       function setSummarySortState(state) {
         localStorage.setItem(SUMMARY_SORT_KEY, JSON.stringify(state));
+      }
+
+      function getBooleanSetting(key, fallback = true) {
+        const raw = localStorage.getItem(key);
+        if (raw === null) return fallback;
+        return raw === "1";
+      }
+
+      function setBooleanSetting(key, value) {
+        localStorage.setItem(key, value ? "1" : "0");
+      }
+
+      function isCalcQuantitySyncEnabled() {
+        return getBooleanSetting(CALC_QTY_SYNC_KEY, true);
+      }
+
+      function isSessionQuantitySyncEnabled() {
+        return getBooleanSetting(SESSION_QTY_SYNC_KEY, true);
+      }
+
+      function syncQuantityFlagControls() {
+        if ($("calcQtySyncToggle")) {
+          $("calcQtySyncToggle").checked = isCalcQuantitySyncEnabled();
+        }
+        if ($("sessionQtySyncToggle")) {
+          $("sessionQtySyncToggle").checked = isSessionQuantitySyncEnabled();
+        }
+      }
+
+      async function renderHistoryPreservingViewport() {
+        const isSessionActive = $("sessionPage").classList.contains("active");
+        const prevScrollY = window.scrollY;
+        await renderHistory();
+        if (isSessionActive) {
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: prevScrollY });
+          });
+        }
       }
 
       function normalizeSummaryColumnConfig(rawConfig) {
@@ -2362,7 +2461,7 @@
             .collection("history")
             .doc(entryId)
             .update({ noteName: noteName.trim() || "Untitled note" });
-          renderHistory();
+          await renderHistoryPreservingViewport();
         } catch (error) {
           console.error("Error renaming entry:", error);
         }
@@ -2371,21 +2470,33 @@
       async function updateHistoryQuantity(entryId, quantityValue) {
         try {
           const quantity = sanitizeQuantity(quantityValue);
-          const scaled = computeScaledAmounts(0, 0, quantity); // Wait, need base values
-          // Actually, need to load the entry first
           const entries = await loadHistory();
           const target = entries.find((entry) => entry.id === entryId);
           if (!target) return;
+
+          const previousQty = sanitizeQuantity(target.quantity);
+          if (!isSessionQuantitySyncEnabled()) {
+            const currentScaled = computeScaledAmounts(
+              target.basePrincipal,
+              target.baseMaturity,
+              previousQty,
+            );
+            target.basePrincipal = currentScaled.principal / quantity;
+            target.baseMaturity = currentScaled.maturity / quantity;
+          }
+
           target.quantity = quantity;
           recalculateHistoryRate(target);
           await window.db.collection("history").doc(entryId).update({
+            basePrincipal: target.basePrincipal,
+            baseMaturity: target.baseMaturity,
             quantity: target.quantity,
             startDate: target.startDate,
             endDate: target.endDate,
             duration: target.duration,
             rate: target.rate,
           });
-          renderHistory();
+          await renderHistoryPreservingViewport();
         } catch (error) {
           console.error("Error updating quantity:", error);
         }
@@ -2442,7 +2553,7 @@
             duration: target.duration,
             rate: target.rate,
           });
-          renderHistory();
+          await renderHistoryPreservingViewport();
         } catch (error) {
           console.error("Error updating dates:", error);
         }
@@ -2477,7 +2588,7 @@
             interestDate: target.interestDate,
             interestAmountRs: target.interestAmountRs,
           });
-          renderHistory();
+          await renderHistoryPreservingViewport();
         } catch (error) {
           console.error("Error updating interest fields:", error);
         }
@@ -2514,7 +2625,7 @@
             duration: target.duration,
             rate: target.rate,
           });
-          renderHistory();
+          await renderHistoryPreservingViewport();
         } catch (error) {
           console.error("Error updating amounts:", error);
         }
@@ -2532,7 +2643,7 @@
         const [entry] = entries.splice(currentIndex, 1);
         entries.splice(targetIndex, 0, entry);
         saveHistory(entries);
-        renderHistory();
+        await renderHistoryPreservingViewport();
       }
 
       async function deleteHistoryEntry(entryId) {
@@ -2546,7 +2657,7 @@
 
           // Longer delay to ensure replication
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          await renderHistory();
+          await renderHistoryPreservingViewport();
         } catch (error) {
           console.error("Error deleting entry:", error);
           alert(`Delete failed: ${error.message}`);
@@ -2603,6 +2714,11 @@
         const newQuantity = sanitizeQuantity(newQuantityRaw);
         $("quantity").value = String(newQuantity);
 
+        if (!isCalcQuantitySyncEnabled()) {
+          previousQuantity = newQuantity;
+          return;
+        }
+
         const factor = newQuantity / previousQuantity;
         const principalRaw = $("principal").value.trim();
         const maturityRaw = $("maturity").value.trim();
@@ -2628,6 +2744,17 @@
         syncAmountInputsWithQuantity($("quantity").value);
       });
 
+      $("calcQtySyncToggle").addEventListener("change", () => {
+        setBooleanSetting(CALC_QTY_SYNC_KEY, $("calcQtySyncToggle").checked);
+      });
+
+      $("sessionQtySyncToggle").addEventListener("change", () => {
+        setBooleanSetting(
+          SESSION_QTY_SYNC_KEY,
+          $("sessionQtySyncToggle").checked,
+        );
+      });
+
       $("clearHistoryBtn").addEventListener("click", async () => {
         if (
           confirm(
@@ -2647,7 +2774,7 @@
               deletePromises.push(doc.ref.delete());
             });
             await Promise.all(deletePromises);
-            renderHistory();
+            await renderHistoryPreservingViewport();
           } catch (error) {
             console.error("Error clearing history:", error);
           }
@@ -2729,6 +2856,7 @@
 
       $("historySort").value = getHistorySortMode();
       syncSummaryColumnControls();
+      syncQuantityFlagControls();
 
       // Authentication helpers
       function showCalculator() {
@@ -3115,11 +3243,75 @@
         $("lumpsumResults").classList.add("show");
       });
 
+      function resetSipCalculator() {
+        $("sipMonthlyAmount").value = "";
+        $("sipAnnualRate").value = "";
+        $("sipYears").value = "";
+        $("sipInvested").textContent = "—";
+        $("sipGain").textContent = "—";
+        $("sipMaturity").textContent = "—";
+        $("sipResults").classList.remove("show");
+      }
+
+      function resetLumpsumCalculator() {
+        $("lumpsumAmount").value = "";
+        $("lumpsumAnnualRate").value = "";
+        $("lumpsumYears").value = "";
+        $("lumpsumInvested").textContent = "—";
+        $("lumpsumGain").textContent = "—";
+        $("lumpsumMaturity").textContent = "—";
+        $("lumpsumResults").classList.remove("show");
+      }
+
+      $("clearSipBtn").addEventListener("click", () => {
+        resetSipCalculator();
+      });
+
+      $("clearLumpsumBtn").addEventListener("click", () => {
+        resetLumpsumCalculator();
+      });
+
       function addMoneyRow(containerId, labelPrefix) {
         const container = $(containerId);
         const nextIndex = container.children.length + 1;
         const row = createMoneyRowElement(`${labelPrefix} ${nextIndex}`);
         container.appendChild(row);
+      }
+
+      function resetCalculatorForm() {
+        $("principal").value = "";
+        $("maturity").value = "";
+        $("quantity").value = "1";
+        previousQuantity = 1;
+        $("startDate").value = "";
+        $("startDateText").value = "";
+        $("endDate").value = "";
+        $("endDateText").value = "";
+        $("interestDate").value = "";
+        $("interestAmountRs").value = "";
+        $("noteName").value = "";
+        $("errorMsg").textContent = "";
+        $("results").classList.remove("show");
+        $("saveCalcBtn").style.display = "none";
+        currentCalcData = null;
+        document
+          .querySelectorAll("input.error")
+          .forEach((el) => el.classList.remove("error"));
+      }
+
+      function resetCashflowPlannerForm() {
+        $("cashflowRecordName").value = "";
+        $("incomeRows").innerHTML = "";
+        $("cardBillRows").innerHTML = "";
+        $("expenseRows").innerHTML = "";
+        addMoneyRow("incomeRows", "Income");
+        addMoneyRow("cardBillRows", "Bill");
+        addMoneyRow("expenseRows", "Expense");
+        $("leftoverResults").classList.remove("show");
+        $("totalIncomeValue").textContent = "—";
+        $("totalOutflowValue").textContent = "—";
+        $("leftoverValue").textContent = "—";
+        setCashflowEditMode(null);
       }
 
       function getMoneyRowsTotal(containerId) {
@@ -3151,6 +3343,10 @@
 
       $("addExpenseBtn").addEventListener("click", () => {
         addMoneyRow("expenseRows", "Expense");
+      });
+
+      $("clearCashflowBtn").addEventListener("click", () => {
+        resetCashflowPlannerForm();
       });
 
       $("calcLeftoverBtn").addEventListener("click", () => {
@@ -3230,6 +3426,10 @@
       addMoneyRow("cardBillRows", "Bill");
       addMoneyRow("expenseRows", "Expense");
       setCashflowEditMode(null);
+
+      $("clearCalcBtn").addEventListener("click", () => {
+        resetCalculatorForm();
+      });
 
       function formatDateForNote(date) {
         return date.toLocaleDateString("en-IN", {

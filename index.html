@@ -257,6 +257,42 @@
       }
 
       /* Todo & EMI shared styles */
+
+      .user-bar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+
+      .user-email {
+        font-size: 0.78rem;
+        color: #60727a;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 260px;
+      }
+
+      .user-signout-btn {
+        border: 2px solid #2c5364;
+        background: #fff;
+        color: #2c5364;
+        border-radius: 8px;
+        padding: 5px 14px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        white-space: nowrap;
+      }
+
+      .user-signout-btn:hover {
+        opacity: 0.85;
+      }
       .todo-input-row {
         display: flex;
         gap: 8px;
@@ -1169,6 +1205,20 @@
           margin-right: 0;
         }
 
+        .user-bar {
+          gap: 6px;
+        }
+
+        .user-email {
+          font-size: 0.7rem;
+          max-width: 180px;
+        }
+
+        .user-signout-btn {
+          padding: 4px 10px;
+          font-size: 0.72rem;
+        }
+
         .mf-money-row {
           grid-template-columns: 1fr 110px auto;
         }
@@ -1197,13 +1247,10 @@
 
     <div class="calculator app-shell" style="display: none">
       <h1>Simple Interest Rate Calculator</h1>
-      <button
-        id="signOutBtn"
-        class="btn secondary"
-        style="display: none; margin-top: 0; margin-bottom: 16px"
-      >
-        Sign out
-      </button>
+      <div class="user-bar" id="userBar" style="display:none">
+        <span class="user-email" id="userEmail"></span>
+        <button id="signOutBtn" class="user-signout-btn" type="button">Sign out</button>
+      </div>
       <nav class="site-nav" aria-label="Site navigation">
         <button class="site-nav-btn active" id="navNotesBtn" data-page="notesPage" type="button">Home / Notes</button>
         <button class="site-nav-btn" id="navSessionBtn" data-page="sessionPage" type="button">Session Notes</button>
@@ -1485,12 +1532,20 @@
                 <tr>
                   <th>Name</th>
                   <th>Amount (₹)</th>
+                  <th>Rate%</th>
                   <th>Start</th>
                   <th>End</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody id="emiTableBody"></tbody>
+              <tfoot>
+                <tr class="history-summary-total-row" id="emiTotalRow" style="display:none">
+                  <td style="font-weight:700">Total</td>
+                  <td style="font-weight:700" id="emiTotalAmount">—</td>
+                  <td colspan="4"></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
           <p class="emi-empty" id="emiEmpty">No EMIs added yet.</p>
@@ -3134,6 +3189,13 @@
           if (signOutBtn) {
             signOutBtn.style.display = "block";
           }
+          // Show user bar with email
+          const userBar = $("userBar");
+          const userEmail = $("userEmail");
+          if (userBar) {
+            userBar.style.display = "flex";
+            userEmail.textContent = user.email || "";
+          }
         } else {
           showAuthUI();
           $("cashflowSavedList").innerHTML = "";
@@ -3143,11 +3205,15 @@
           if (signOutBtn) {
             signOutBtn.style.display = "none";
           }
+          const userBar = $("userBar");
+          if (userBar) userBar.style.display = "none";
         }
       });
 
       document.getElementById("signOutBtn").addEventListener("click", () => {
-        window.auth.signOut();
+        if (confirm("Are you sure you want to sign out?")) {
+          window.auth.signOut();
+        }
       });
 
       migrateSessionHistoryToLocal();
@@ -3937,6 +4003,7 @@
           emis.forEach((emi) => {
             tbody.appendChild(createEmiRow(emi));
           });
+          updateEmiTotal();
         } catch (e) {
           console.error("Error loading EMIs:", e);
           $("emiEmpty").style.display = "block";
@@ -3957,6 +4024,7 @@
             const newVal = type === "number" ? Number(inp.value) : inp.value.trim();
             try {
               await window.db.collection("emis").doc(emi.id).update({ [field]: newVal });
+              updateEmiTotal();
             } catch (e) { console.error("Error updating EMI:", e); }
           });
           inp.addEventListener("keydown", (e) => { if (e.key === "Enter") inp.blur(); });
@@ -3966,6 +4034,7 @@
 
         tr.appendChild(makeCell(emi.name, "name", "text"));
         tr.appendChild(makeCell(emi.amount, "amount", "number"));
+        tr.appendChild(makeCell(emi.rate, "rate", "number"));
         tr.appendChild(makeCell(emi.startDate, "startDate", "date"));
         tr.appendChild(makeCell(emi.endDate, "endDate", "date"));
 
@@ -3978,6 +4047,7 @@
           try {
             await window.db.collection("emis").doc(emi.id).delete();
             tr.remove();
+            updateEmiTotal();
             if (!$("emiTableBody").children.length) $("emiEmpty").style.display = "block";
           } catch (e) { console.error("Error deleting EMI:", e); }
         });
@@ -3995,6 +4065,7 @@
           const payload = {
             name: "",
             amount: 0,
+            rate: 0,
             startDate: "",
             endDate: "",
             createdBy: uid,
@@ -4002,8 +4073,9 @@
           };
           const ref = await window.db.collection("emis").add(payload);
           const emi = { id: ref.id, ...payload };
-          $("emiTableBody").appendChild(createEmiRow(emi));
-          $("emiEmpty").style.display = "none";
+          $('emiTableBody').appendChild(createEmiRow(emi));
+          $('emiEmpty').style.display = 'none';
+          updateEmiTotal();
           // Focus name field of the new row
           const lastRow = $("emiTableBody").lastElementChild;
           if (lastRow) {
@@ -4015,6 +4087,27 @@
           alert("Failed to add EMI.");
         }
       });
+
+      function updateEmiTotal() {
+        const rows = $("emiTableBody").querySelectorAll("tr");
+        let total = 0;
+        rows.forEach((row) => {
+          const amountInput = row.querySelectorAll("input")[1];
+          if (amountInput) {
+            const val = Number(amountInput.value);
+            if (Number.isFinite(val)) total += val;
+          }
+        });
+        const totalRow = $("emiTotalRow");
+        const totalCell = $("emiTotalAmount");
+        if (rows.length > 0) {
+          totalRow.style.display = "";
+          totalCell.textContent = formatCurrencyNoDecimals(total);
+        } else {
+          totalRow.style.display = "none";
+          totalCell.textContent = "\u2014";
+        }
+      }
 
 
     </script>

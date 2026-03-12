@@ -256,6 +256,161 @@
         margin-top: 12px;
       }
 
+      /* Todo & EMI shared styles */
+      .todo-input-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .todo-input-row input {
+        flex: 1;
+        padding: 8px 10px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-family: inherit;
+        outline: none;
+      }
+
+      .todo-input-row input:focus {
+        border-color: #2c5364;
+      }
+
+      .todo-input-row button {
+        padding: 8px 14px;
+        border: none;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #203a43, #2c5364);
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .todo-list {
+        list-style: none;
+        display: grid;
+        gap: 6px;
+      }
+
+      .todo-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border: 1px solid #d8e8ee;
+        border-radius: 8px;
+        background: #fff;
+        font-size: 0.84rem;
+      }
+
+      .todo-item.completed .todo-text {
+        text-decoration: line-through;
+        color: #999;
+      }
+
+      .todo-item input[type="checkbox"] {
+        margin: 0;
+        flex-shrink: 0;
+      }
+
+      .todo-text {
+        flex: 1;
+        color: #2c5364;
+        font-weight: 600;
+        border: none;
+        background: transparent;
+        font-size: 0.84rem;
+        font-family: inherit;
+        outline: none;
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+
+      .todo-text:focus {
+        background: #f0f7fa;
+        border: 1px solid #d8e8ee;
+      }
+
+      .todo-item-actions {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
+      .todo-item-actions button {
+        border: 1px solid #d8e8ee;
+        background: #fff;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      .todo-delete-btn {
+        color: #d9534f;
+        border-color: #d9534f !important;
+      }
+
+      .emi-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+      }
+
+      .emi-table th,
+      .emi-table td {
+        border-bottom: 1px solid #e8f0f4;
+        padding: 6px 5px;
+        text-align: left;
+        color: #2c5364;
+      }
+
+      .emi-table th {
+        background: #f8fbfd;
+        font-weight: 700;
+        font-size: 0.74rem;
+        white-space: nowrap;
+      }
+
+      .emi-table td input {
+        width: 100%;
+        border: 1px solid transparent;
+        background: transparent;
+        font-size: 0.78rem;
+        font-family: inherit;
+        color: #2c5364;
+        padding: 3px 4px;
+        border-radius: 4px;
+        outline: none;
+      }
+
+      .emi-table td input:focus {
+        border-color: #d8e8ee;
+        background: #f0f7fa;
+      }
+
+      .emi-table .emi-delete-btn {
+        border: 1px solid #d9534f;
+        background: #fff;
+        color: #d9534f;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .emi-empty {
+        color: #666;
+        font-size: 0.82rem;
+        padding: 8px 0;
+      }
+
       .mf-card h3 {
         color: #2c5364;
         font-size: 1rem;
@@ -1305,6 +1460,40 @@
             <div class="result-row"><span class="label">Net Balance</span><span class="value" id="leftoverValue">—</span></div>
           </div>
           <div class="mf-saved-list" id="cashflowSavedList"></div>
+        </div>
+
+        <!-- Todo Tasks -->
+        <div class="mf-card">
+          <h3>Todo Tasks</h3>
+          <div class="todo-input-row">
+            <input type="text" id="todoNewInput" placeholder="Add a task..." />
+            <button type="button" id="todoAddBtn">Add</button>
+          </div>
+          <ul class="todo-list" id="todoList"></ul>
+          <p class="emi-empty" id="todoEmpty" style="display:none">No tasks yet.</p>
+        </div>
+
+        <!-- EMI Tracker -->
+        <div class="mf-card">
+          <h3>EMI Tracker</h3>
+          <div class="mf-action-row" style="margin-bottom:10px">
+            <button class="btn secondary" id="emiAddBtn" type="button" style="margin-top:0;width:auto;padding:8px 14px;font-size:0.85rem;">+ Add EMI</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="emi-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Amount (₹)</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="emiTableBody"></tbody>
+            </table>
+          </div>
+          <p class="emi-empty" id="emiEmpty">No EMIs added yet.</p>
         </div>
 
         <div class="mf-card">
@@ -2940,12 +3129,16 @@
           }
           showCalculator();
           await loadCashflowRecords();
+          await loadTodos();
+          await loadEmis();
           if (signOutBtn) {
             signOutBtn.style.display = "block";
           }
         } else {
           showAuthUI();
           $("cashflowSavedList").innerHTML = "";
+          $("todoList").innerHTML = "";
+          $("emiTableBody").innerHTML = "";
           setCashflowEditMode(null);
           if (signOutBtn) {
             signOutBtn.style.display = "none";
@@ -3607,6 +3800,223 @@
           $("saveCalcBtn").style.display = "none";
         }
       });
+
+      // ─── Todo Tasks ─────────────────────────────────────────
+      async function loadTodos() {
+        const list = $("todoList");
+        list.innerHTML = "";
+
+        if (!window.auth.currentUser) {
+          $("todoEmpty").style.display = "block";
+          return;
+        }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const snap = await window.db
+            .collection("todos")
+            .where("createdBy", "==", uid)
+            .orderBy("createdAtMs", "asc")
+            .get();
+
+          const todos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+          $("todoEmpty").style.display = todos.length ? "none" : "block";
+
+          todos.forEach((todo) => {
+            list.appendChild(createTodoItem(todo));
+          });
+        } catch (error) {
+          console.error("Error loading todos:", error);
+          $("todoEmpty").style.display = "block";
+        }
+      }
+
+      function createTodoItem(todo) {
+        const li = document.createElement("li");
+        li.className = "todo-item" + (todo.done ? " completed" : "");
+        li.dataset.id = todo.id;
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = Boolean(todo.done);
+        cb.addEventListener("change", async () => {
+          try {
+            await window.db.collection("todos").doc(todo.id).update({ done: cb.checked });
+            li.classList.toggle("completed", cb.checked);
+          } catch (e) { console.error("Error toggling todo:", e); }
+        });
+
+        const textInput = document.createElement("input");
+        textInput.type = "text";
+        textInput.className = "todo-text";
+        textInput.value = todo.text || "";
+        textInput.addEventListener("blur", async () => {
+          const newText = textInput.value.trim();
+          if (!newText || newText === (todo.text || "")) return;
+          try {
+            await window.db.collection("todos").doc(todo.id).update({ text: newText });
+            todo.text = newText;
+          } catch (e) { console.error("Error updating todo text:", e); }
+        });
+        textInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") textInput.blur();
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "todo-item-actions";
+
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "todo-delete-btn";
+        delBtn.textContent = "Delete";
+        delBtn.addEventListener("click", async () => {
+          try {
+            await window.db.collection("todos").doc(todo.id).delete();
+            li.remove();
+            if (!$("todoList").children.length) $("todoEmpty").style.display = "block";
+          } catch (e) { console.error("Error deleting todo:", e); }
+        });
+
+        actions.appendChild(delBtn);
+        li.appendChild(cb);
+        li.appendChild(textInput);
+        li.appendChild(actions);
+        return li;
+      }
+
+      $("todoAddBtn").addEventListener("click", async () => {
+        const input = $("todoNewInput");
+        const text = input.value.trim();
+        if (!text) return;
+        if (!window.auth.currentUser) { alert("Sign in to add tasks."); return; }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const payload = {
+            text,
+            done: false,
+            createdBy: uid,
+            createdAtMs: Date.now(),
+          };
+          const ref = await window.db.collection("todos").add(payload);
+          const todo = { id: ref.id, ...payload };
+          $("todoList").appendChild(createTodoItem(todo));
+          $("todoEmpty").style.display = "none";
+          input.value = "";
+        } catch (e) {
+          console.error("Error adding todo:", e);
+          alert("Failed to add task.");
+        }
+      });
+
+      $("todoNewInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") $("todoAddBtn").click();
+      });
+
+      // ─── EMI Tracker ────────────────────────────────────────
+      async function loadEmis() {
+        const tbody = $("emiTableBody");
+        tbody.innerHTML = "";
+
+        if (!window.auth.currentUser) {
+          $("emiEmpty").style.display = "block";
+          return;
+        }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const snap = await window.db
+            .collection("emis")
+            .where("createdBy", "==", uid)
+            .orderBy("createdAtMs", "asc")
+            .get();
+
+          const emis = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+          $("emiEmpty").style.display = emis.length ? "none" : "block";
+
+          emis.forEach((emi) => {
+            tbody.appendChild(createEmiRow(emi));
+          });
+        } catch (e) {
+          console.error("Error loading EMIs:", e);
+          $("emiEmpty").style.display = "block";
+        }
+      }
+
+      function createEmiRow(emi) {
+        const tr = document.createElement("tr");
+        tr.dataset.id = emi.id;
+
+        function makeCell(value, field, type) {
+          const td = document.createElement("td");
+          const inp = document.createElement("input");
+          inp.type = type || "text";
+          inp.value = value || "";
+          if (type === "number") { inp.min = "0"; inp.step = "any"; }
+          inp.addEventListener("blur", async () => {
+            const newVal = type === "number" ? Number(inp.value) : inp.value.trim();
+            try {
+              await window.db.collection("emis").doc(emi.id).update({ [field]: newVal });
+            } catch (e) { console.error("Error updating EMI:", e); }
+          });
+          inp.addEventListener("keydown", (e) => { if (e.key === "Enter") inp.blur(); });
+          td.appendChild(inp);
+          return td;
+        }
+
+        tr.appendChild(makeCell(emi.name, "name", "text"));
+        tr.appendChild(makeCell(emi.amount, "amount", "number"));
+        tr.appendChild(makeCell(emi.startDate, "startDate", "date"));
+        tr.appendChild(makeCell(emi.endDate, "endDate", "date"));
+
+        const actionTd = document.createElement("td");
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "emi-delete-btn";
+        delBtn.textContent = "Del";
+        delBtn.addEventListener("click", async () => {
+          try {
+            await window.db.collection("emis").doc(emi.id).delete();
+            tr.remove();
+            if (!$("emiTableBody").children.length) $("emiEmpty").style.display = "block";
+          } catch (e) { console.error("Error deleting EMI:", e); }
+        });
+        actionTd.appendChild(delBtn);
+        tr.appendChild(actionTd);
+
+        return tr;
+      }
+
+      $("emiAddBtn").addEventListener("click", async () => {
+        if (!window.auth.currentUser) { alert("Sign in to add EMIs."); return; }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const payload = {
+            name: "",
+            amount: 0,
+            startDate: "",
+            endDate: "",
+            createdBy: uid,
+            createdAtMs: Date.now(),
+          };
+          const ref = await window.db.collection("emis").add(payload);
+          const emi = { id: ref.id, ...payload };
+          $("emiTableBody").appendChild(createEmiRow(emi));
+          $("emiEmpty").style.display = "none";
+          // Focus name field of the new row
+          const lastRow = $("emiTableBody").lastElementChild;
+          if (lastRow) {
+            const firstInput = lastRow.querySelector("input");
+            if (firstInput) firstInput.focus();
+          }
+        } catch (e) {
+          console.error("Error adding EMI:", e);
+          alert("Failed to add EMI.");
+        }
+      });
+
+
     </script>
   </body>
 </html>

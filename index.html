@@ -413,6 +413,26 @@
         white-space: nowrap;
       }
 
+      .emi-table th.emi-sortable {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .emi-table th.emi-sortable::after {
+        content: " \2195";
+        opacity: 0.4;
+      }
+
+      .emi-table th.emi-sort-asc::after {
+        content: " \2191";
+        opacity: 1;
+      }
+
+      .emi-table th.emi-sort-desc::after {
+        content: " \2193";
+        opacity: 1;
+      }
+
       .emi-table td input {
         width: 100%;
         border: 1px solid transparent;
@@ -1530,11 +1550,11 @@
             <table class="emi-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Amount (₹)</th>
-                  <th>Rate%</th>
-                  <th>Start</th>
-                  <th>End</th>
+                  <th class="emi-sortable" data-emi-sort="name">Name</th>
+                  <th class="emi-sortable" data-emi-sort="amount">Amount (₹)</th>
+                  <th class="emi-sortable" data-emi-sort="rate">Rate%</th>
+                  <th class="emi-sortable" id="emiSortStart" data-emi-sort="startDate">Start</th>
+                  <th class="emi-sortable" id="emiSortEnd" data-emi-sort="endDate">End</th>
                   <th></th>
                 </tr>
               </thead>
@@ -3980,6 +4000,68 @@
       });
 
       // ─── EMI Tracker ────────────────────────────────────────
+      let emiSortState = { column: null, direction: "asc" };
+
+      function updateEmiSortHeaders() {
+        document.querySelectorAll(".emi-sortable").forEach((th) => {
+          const key = th.dataset.emiSort;
+          th.classList.remove("emi-sort-asc", "emi-sort-desc");
+          if (emiSortState.column === key) {
+            th.classList.add(emiSortState.direction === "asc" ? "emi-sort-asc" : "emi-sort-desc");
+          }
+        });
+      }
+
+      function sortEmiEntries(emis) {
+        if (!emiSortState.column) return emis;
+        const col = emiSortState.column;
+        const dir = emiSortState.direction === "desc" ? -1 : 1;
+        return [...emis].sort((a, b) => {
+          if (col === "amount" || col === "rate") {
+            const aNum = Number(a[col]);
+            const bNum = Number(b[col]);
+            const aHas = Number.isFinite(aNum);
+            const bHas = Number.isFinite(bNum);
+
+            if (!aHas && !bHas) return 0;
+            if (!aHas) return 1;
+            if (!bHas) return -1;
+            return (aNum - bNum) * dir;
+          }
+
+          if (col === "startDate" || col === "endDate") {
+            const aVal = typeof a[col] === "string" ? a[col] : "";
+            const bVal = typeof b[col] === "string" ? b[col] : "";
+            if (!aVal && !bVal) return 0;
+            if (!aVal) return 1;
+            if (!bVal) return -1;
+            return aVal.localeCompare(bVal) * dir;
+          }
+
+          const aText = String(a[col] || "").toLowerCase();
+          const bText = String(b[col] || "").toLowerCase();
+          if (!aText && !bText) return 0;
+          if (!aText) return 1;
+          if (!bText) return -1;
+          return aText.localeCompare(bText, undefined, { numeric: true }) * dir;
+        });
+      }
+
+      document.querySelectorAll(".emi-sortable").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.emiSort;
+          if (emiSortState.column !== key) {
+            emiSortState = { column: key, direction: "asc" };
+          } else if (emiSortState.direction === "asc") {
+            emiSortState.direction = "desc";
+          } else {
+            emiSortState = { column: null, direction: "asc" };
+          }
+          updateEmiSortHeaders();
+          loadEmis();
+        });
+      });
+
       async function loadEmis() {
         const tbody = $("emiTableBody");
         tbody.innerHTML = "";
@@ -3998,12 +4080,14 @@
             .get();
 
           const emis = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          $("emiEmpty").style.display = emis.length ? "none" : "block";
+          const sorted = sortEmiEntries(emis);
+          $("emiEmpty").style.display = sorted.length ? "none" : "block";
 
-          emis.forEach((emi) => {
+          sorted.forEach((emi) => {
             tbody.appendChild(createEmiRow(emi));
           });
           updateEmiTotal();
+          updateEmiSortHeaders();
         } catch (e) {
           console.error("Error loading EMIs:", e);
           $("emiEmpty").style.display = "block";
@@ -4018,9 +4102,30 @@
           const td = document.createElement("td");
           const inp = document.createElement("input");
           inp.type = type || "text";
-          inp.value = value || "";
+          const normalizedValue =
+            type === "date"
+              ? (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+                  ? value
+                  : "")
+              : (value ?? "");
+          inp.value = String(normalizedValue);
           if (type === "number") { inp.min = "0"; inp.step = "any"; }
+          if (type === "date") {
+            inp.autocomplete = "off";
+            inp.setAttribute("data-lpignore", "true");
+          }
+          let hasUserChanged = false;
+          inp.addEventListener("input", () => {
+            hasUserChanged = true;
+          });
+          inp.addEventListener("change", () => {
+            hasUserChanged = true;
+          });
           inp.addEventListener("blur", async () => {
+            if (type === "date" && !hasUserChanged && !normalizedValue) {
+              inp.value = "";
+              return;
+            }
             const newVal = type === "number" ? Number(inp.value) : inp.value.trim();
             try {
               await window.db.collection("emis").doc(emi.id).update({ [field]: newVal });

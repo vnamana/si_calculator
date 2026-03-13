@@ -1680,6 +1680,7 @@
       const HISTORY_SORT_KEY = "simple-interest-history-sort-v1";
       const SUMMARY_SORT_KEY = "simple-interest-summary-sort-v1";
       const SUMMARY_COLUMNS_KEY = "simple-interest-summary-columns-v1";
+      const EMI_SORT_KEY = "simple-interest-emi-sort-v1";
       const CALC_QTY_SYNC_KEY = "simple-interest-calc-qty-sync-v1";
       const SESSION_QTY_SYNC_KEY = "simple-interest-session-qty-sync-v1";
       const SUMMARY_COLUMN_DEFAULTS = {
@@ -1714,6 +1715,13 @@
         interestDate: "Interest Date",
         interestAmount: "Interest Amt (Rs)",
       };
+      const EMI_SORT_COLUMNS = new Set([
+        "name",
+        "amount",
+        "rate",
+        "startDate",
+        "endDate",
+      ]);
 
       function parseCurrencyText(value) {
         if (typeof value === "number") return value;
@@ -1816,6 +1824,77 @@
 
       function setSummarySortState(state) {
         localStorage.setItem(SUMMARY_SORT_KEY, JSON.stringify(state));
+      }
+
+      function normalizeEmiSortState(rawState) {
+        const state = rawState || {};
+        const column = EMI_SORT_COLUMNS.has(state.column) ? state.column : null;
+        const direction = state.direction === "desc" ? "desc" : "asc";
+        return { column, direction };
+      }
+
+      function getEmiSortState() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(EMI_SORT_KEY) || "null");
+          return normalizeEmiSortState(stored);
+        } catch (error) {
+          return { column: null, direction: "asc" };
+        }
+      }
+
+      async function saveEmiSortStateToDb(state) {
+        try {
+          if (!window.auth.currentUser || !summaryPrefsRemoteEnabled) return;
+          await window.db
+            .collection("userPreferences")
+            .doc(window.auth.currentUser.uid)
+            .set(
+              {
+                emiSortState: state,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            );
+        } catch (error) {
+          if (isFirestorePermissionDenied(error)) {
+            summaryPrefsRemoteEnabled = false;
+            return;
+          }
+          console.error("Error saving EMI sort state:", error);
+        }
+      }
+
+      async function loadEmiSortStateFromDb() {
+        try {
+          if (!window.auth.currentUser) return null;
+          const snap = await window.db
+            .collection("userPreferences")
+            .doc(window.auth.currentUser.uid)
+            .get();
+          if (!snap.exists) return null;
+          const data = snap.data() || {};
+          if (!data.emiSortState) return null;
+          summaryPrefsRemoteEnabled = true;
+          return normalizeEmiSortState(data.emiSortState);
+        } catch (error) {
+          if (isFirestorePermissionDenied(error)) {
+            summaryPrefsRemoteEnabled = false;
+            return null;
+          }
+          console.error("Error loading EMI sort state:", error);
+          return null;
+        }
+      }
+
+      function setEmiSortState(state, options = {}) {
+        const normalized = normalizeEmiSortState(state);
+        emiSortState = normalized;
+        localStorage.setItem(EMI_SORT_KEY, JSON.stringify(normalized));
+
+        const shouldPersistRemote = options.persistRemote !== false;
+        if (shouldPersistRemote) {
+          saveEmiSortStateToDb(normalized);
+        }
       }
 
       function getBooleanSetting(key, fallback = true) {
@@ -2146,7 +2225,7 @@
         if (parsedStandard) return parsedStandard;
 
         const monthMatch = input.match(
-          /^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})$/,
+          /^(\d{1,2})[-\s]+([A-Za-z]{3,})[-\s]+(\d{2}|\d{4})$/,
         );
         if (monthMatch) {
           const day = Number(monthMatch[1]);
@@ -2165,7 +2244,10 @@
             dec: 12,
           };
           const month = monthNames[monthMatch[2].slice(0, 3).toLowerCase()];
-          const year = Number(monthMatch[3]);
+          let year = Number(monthMatch[3]);
+          if (monthMatch[3].length === 2) {
+            year += 2000;
+          }
           if (month) {
             return createValidDate(year, month, day);
           }
@@ -3202,6 +3284,10 @@
           if (dbConfig) {
             setSummaryColumnConfig(dbConfig, { persistRemote: false });
           }
+          const dbEmiSortState = await loadEmiSortStateFromDb();
+          if (dbEmiSortState) {
+            setEmiSortState(dbEmiSortState, { persistRemote: false });
+          }
           showCalculator();
           await loadCashflowRecords();
           await loadTodos();
@@ -3722,11 +3808,24 @@
       });
 
       function formatDateForNote(date) {
-        return date.toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        });
+        const day = String(date.getDate()).padStart(2, "0");
+        const months = [
+          "JAN",
+          "FEB",
+          "MAR",
+          "APR",
+          "MAY",
+          "JUN",
+          "JUL",
+          "AUG",
+          "SEP",
+          "OCT",
+          "NOV",
+          "DEC",
+        ];
+        const month = months[date.getMonth()];
+        const year = String(date.getFullYear()).slice(-2);
+        return `${day}-${month}-${year}`;
       }
 
       $("calcBtn").addEventListener("click", () => {
@@ -4000,7 +4099,7 @@
       });
 
       // ─── EMI Tracker ────────────────────────────────────────
-      let emiSortState = { column: null, direction: "asc" };
+      let emiSortState = getEmiSortState();
 
       function updateEmiSortHeaders() {
         document.querySelectorAll(".emi-sortable").forEach((th) => {
@@ -4030,12 +4129,17 @@
           }
 
           if (col === "startDate" || col === "endDate") {
-            const aVal = typeof a[col] === "string" ? a[col] : "";
-            const bVal = typeof b[col] === "string" ? b[col] : "";
-            if (!aVal && !bVal) return 0;
-            if (!aVal) return 1;
-            if (!bVal) return -1;
-            return aVal.localeCompare(bVal) * dir;
+            const aDate = parseStoredNoteDate(a[col]);
+            const bDate = parseStoredNoteDate(b[col]);
+            const aTime = aDate ? aDate.getTime() : Number.NaN;
+            const bTime = bDate ? bDate.getTime() : Number.NaN;
+            const aHas = Number.isFinite(aTime);
+            const bHas = Number.isFinite(bTime);
+
+            if (!aHas && !bHas) return 0;
+            if (!aHas) return 1;
+            if (!bHas) return -1;
+            return (aTime - bTime) * dir;
           }
 
           const aText = String(a[col] || "").toLowerCase();
@@ -4057,6 +4161,7 @@
           } else {
             emiSortState = { column: null, direction: "asc" };
           }
+          setEmiSortState(emiSortState);
           updateEmiSortHeaders();
           loadEmis();
         });
@@ -4101,31 +4206,52 @@
         function makeCell(value, field, type) {
           const td = document.createElement("td");
           const inp = document.createElement("input");
-          inp.type = type || "text";
-          const normalizedValue =
-            type === "date"
-              ? (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
-                  ? value
-                  : "")
-              : (value ?? "");
+          const isDateField = type === "date";
+          inp.type = isDateField ? "text" : (type || "text");
+          const normalizedValue = isDateField
+            ? (() => {
+                const parsed = parseStoredNoteDate(value);
+                return parsed ? formatDateForNote(parsed) : "";
+              })()
+            : (value ?? "");
           inp.value = String(normalizedValue);
           if (type === "number") { inp.min = "0"; inp.step = "any"; }
-          if (type === "date") {
+          if (isDateField) {
+            inp.placeholder = "DD-MMM-YY";
             inp.autocomplete = "off";
             inp.setAttribute("data-lpignore", "true");
           }
-          let hasUserChanged = false;
-          inp.addEventListener("input", () => {
-            hasUserChanged = true;
-          });
-          inp.addEventListener("change", () => {
-            hasUserChanged = true;
-          });
           inp.addEventListener("blur", async () => {
-            if (type === "date" && !hasUserChanged && !normalizedValue) {
-              inp.value = "";
-              return;
+            if (isDateField) {
+              const raw = inp.value.trim();
+              if (!raw) {
+                try {
+                  await window.db.collection("emis").doc(emi.id).update({ [field]: "" });
+                  return;
+                } catch (e) {
+                  console.error("Error updating EMI:", e);
+                  return;
+                }
+              }
+
+              const parsed = parseStoredNoteDate(raw);
+              if (!parsed) {
+                alert("Invalid date. Use DD-MMM-YY, YYYY-MM-DD, or DD/MM/YYYY.");
+                inp.value = String(normalizedValue);
+                return;
+              }
+
+              const isoValue = toIsoDate(parsed);
+              try {
+                await window.db.collection("emis").doc(emi.id).update({ [field]: isoValue });
+                inp.value = formatDateForNote(parsed);
+                return;
+              } catch (e) {
+                console.error("Error updating EMI:", e);
+                return;
+              }
             }
+
             const newVal = type === "number" ? Number(inp.value) : inp.value.trim();
             try {
               await window.db.collection("emis").doc(emi.id).update({ [field]: newVal });

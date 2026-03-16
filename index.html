@@ -387,6 +387,11 @@
         font-family: inherit;
       }
 
+      .todo-edit-btn {
+        color: #2c5364;
+        border-color: #2c5364 !important;
+      }
+
       .todo-delete-btn {
         color: #d9534f;
         border-color: #d9534f !important;
@@ -443,6 +448,27 @@
         padding: 3px 4px;
         border-radius: 4px;
         outline: none;
+      }
+
+      .emi-date-input {
+        min-width: 96px;
+      }
+
+      .emi-col-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-size: 0.74rem;
+        font-weight: 600;
+        color: #2c5364;
+      }
+
+      .emi-col-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
       }
 
       .emi-table td input:focus {
@@ -1243,6 +1269,16 @@
           grid-template-columns: 1fr 110px auto;
         }
 
+        .emi-date-input {
+          min-width: 88px;
+          font-size: 0.72rem;
+        }
+
+        .emi-col-controls {
+          font-size: 0.7rem;
+          gap: 6px;
+        }
+
         .calc-qty-sync-toggle {
           gap: 4px;
           font-size: 0.7rem;
@@ -1545,18 +1581,25 @@
           <h3>EMI Tracker</h3>
           <div class="mf-action-row" style="margin-bottom:10px">
             <button class="btn secondary" id="emiAddBtn" type="button" style="margin-top:0;width:auto;padding:8px 14px;font-size:0.85rem;">+ Add EMI</button>
+            <div class="emi-col-controls">
+              <label class="emi-col-toggle" for="emiShowRate">
+                <input type="checkbox" id="emiShowRate" checked />
+                <span>Rate%</span>
+              </label>
+              <label class="emi-col-toggle" for="emiShowStartDate">
+                <input type="checkbox" id="emiShowStartDate" checked />
+                <span>Start</span>
+              </label>
+              <label class="emi-col-toggle" for="emiShowEndDate">
+                <input type="checkbox" id="emiShowEndDate" checked />
+                <span>End</span>
+              </label>
+            </div>
           </div>
           <div style="overflow-x:auto">
             <table class="emi-table">
               <thead>
-                <tr>
-                  <th class="emi-sortable" data-emi-sort="name">Name</th>
-                  <th class="emi-sortable" data-emi-sort="amount">Amount (₹)</th>
-                  <th class="emi-sortable" data-emi-sort="rate">Rate%</th>
-                  <th class="emi-sortable" id="emiSortStart" data-emi-sort="startDate">Start</th>
-                  <th class="emi-sortable" id="emiSortEnd" data-emi-sort="endDate">End</th>
-                  <th></th>
-                </tr>
+                <tr id="emiHeadRow"></tr>
               </thead>
               <tbody id="emiTableBody"></tbody>
               <tfoot>
@@ -1681,6 +1724,7 @@
       const SUMMARY_SORT_KEY = "simple-interest-summary-sort-v1";
       const SUMMARY_COLUMNS_KEY = "simple-interest-summary-columns-v1";
       const EMI_SORT_KEY = "simple-interest-emi-sort-v1";
+      const EMI_COLUMNS_KEY = "simple-interest-emi-columns-v1";
       const CALC_QTY_SYNC_KEY = "simple-interest-calc-qty-sync-v1";
       const SESSION_QTY_SYNC_KEY = "simple-interest-session-qty-sync-v1";
       const SUMMARY_COLUMN_DEFAULTS = {
@@ -1722,6 +1766,11 @@
         "startDate",
         "endDate",
       ]);
+      const EMI_COLUMN_DEFAULTS = {
+        rate: true,
+        startDate: true,
+        endDate: true,
+      };
 
       function parseCurrencyText(value) {
         if (typeof value === "number") return value;
@@ -1895,6 +1944,71 @@
         if (shouldPersistRemote) {
           saveEmiSortStateToDb(normalized);
         }
+      }
+
+      function normalizeEmiColumnConfig(rawConfig) {
+        const config = rawConfig || {};
+        return {
+          rate: config.rate !== false,
+          startDate: config.startDate !== false,
+          endDate: config.endDate !== false,
+        };
+      }
+
+      function getEmiColumnConfig() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(EMI_COLUMNS_KEY) || "null");
+          return normalizeEmiColumnConfig(stored);
+        } catch (error) {
+          return { ...EMI_COLUMN_DEFAULTS };
+        }
+      }
+
+      function setEmiColumnConfig(config) {
+        const normalized = normalizeEmiColumnConfig(config);
+        localStorage.setItem(EMI_COLUMNS_KEY, JSON.stringify(normalized));
+      }
+
+      function getVisibleEmiColumns() {
+        const config = getEmiColumnConfig();
+        const columns = ["name", "amount"];
+        if (config.rate) columns.push("rate");
+        if (config.startDate) columns.push("startDate");
+        if (config.endDate) columns.push("endDate");
+        columns.push("actions");
+        return columns;
+      }
+
+      function syncEmiColumnControls() {
+        const config = getEmiColumnConfig();
+        if ($("emiShowRate")) $("emiShowRate").checked = config.rate;
+        if ($("emiShowStartDate")) $("emiShowStartDate").checked = config.startDate;
+        if ($("emiShowEndDate")) $("emiShowEndDate").checked = config.endDate;
+      }
+
+      function renderEmiHeaders(columns) {
+        const headRow = $("emiHeadRow");
+        if (!headRow) return;
+        headRow.innerHTML = "";
+
+        const labels = {
+          name: "Name",
+          amount: "Amount (₹)",
+          rate: "Rate%",
+          startDate: "Start",
+          endDate: "End",
+          actions: "",
+        };
+
+        columns.forEach((column) => {
+          const th = document.createElement("th");
+          th.textContent = labels[column] || column;
+          if (EMI_SORT_COLUMNS.has(column)) {
+            th.className = "emi-sortable";
+            th.dataset.emiSort = column;
+          }
+          headRow.appendChild(th);
+        });
       }
 
       function getBooleanSetting(key, fallback = true) {
@@ -4062,6 +4176,16 @@
           } catch (e) { console.error("Error deleting todo:", e); }
         });
 
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "todo-edit-btn";
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", () => {
+          textInput.focus();
+          textInput.select();
+        });
+
+        actions.appendChild(editBtn);
         actions.appendChild(delBtn);
         li.appendChild(cb);
         li.appendChild(textInput);
@@ -4111,6 +4235,24 @@
         });
       }
 
+      function bindEmiSortHeaderEvents() {
+        document.querySelectorAll(".emi-sortable").forEach((th) => {
+          th.addEventListener("click", () => {
+            const key = th.dataset.emiSort;
+            if (emiSortState.column !== key) {
+              emiSortState = { column: key, direction: "asc" };
+            } else if (emiSortState.direction === "asc") {
+              emiSortState.direction = "desc";
+            } else {
+              emiSortState = { column: null, direction: "asc" };
+            }
+            setEmiSortState(emiSortState);
+            updateEmiSortHeaders();
+            loadEmis();
+          });
+        });
+      }
+
       function sortEmiEntries(emis) {
         if (!emiSortState.column) return emis;
         const col = emiSortState.column;
@@ -4151,25 +4293,16 @@
         });
       }
 
-      document.querySelectorAll(".emi-sortable").forEach((th) => {
-        th.addEventListener("click", () => {
-          const key = th.dataset.emiSort;
-          if (emiSortState.column !== key) {
-            emiSortState = { column: key, direction: "asc" };
-          } else if (emiSortState.direction === "asc") {
-            emiSortState.direction = "desc";
-          } else {
-            emiSortState = { column: null, direction: "asc" };
-          }
-          setEmiSortState(emiSortState);
-          updateEmiSortHeaders();
-          loadEmis();
-        });
-      });
-
       async function loadEmis() {
         const tbody = $("emiTableBody");
         tbody.innerHTML = "";
+        const visibleColumns = getVisibleEmiColumns();
+        renderEmiHeaders(visibleColumns);
+        bindEmiSortHeaderEvents();
+
+        if (emiSortState.column && !visibleColumns.includes(emiSortState.column)) {
+          setEmiSortState({ column: null, direction: "asc" });
+        }
 
         if (!window.auth.currentUser) {
           $("emiEmpty").style.display = "block";
@@ -4189,7 +4322,7 @@
           $("emiEmpty").style.display = sorted.length ? "none" : "block";
 
           sorted.forEach((emi) => {
-            tbody.appendChild(createEmiRow(emi));
+            tbody.appendChild(createEmiRow(emi, visibleColumns));
           });
           updateEmiTotal();
           updateEmiSortHeaders();
@@ -4199,7 +4332,7 @@
         }
       }
 
-      function createEmiRow(emi) {
+      function createEmiRow(emi, visibleColumns) {
         const tr = document.createElement("tr");
         tr.dataset.id = emi.id;
 
@@ -4215,6 +4348,8 @@
               })()
             : (value ?? "");
           inp.value = String(normalizedValue);
+          if (field === "amount") inp.classList.add("emi-amount-input");
+          if (isDateField) inp.classList.add("emi-date-input");
           if (type === "number") { inp.min = "0"; inp.step = "any"; }
           if (isDateField) {
             inp.placeholder = "DD-MMM-YY";
@@ -4263,27 +4398,30 @@
           return td;
         }
 
-        tr.appendChild(makeCell(emi.name, "name", "text"));
-        tr.appendChild(makeCell(emi.amount, "amount", "number"));
-        tr.appendChild(makeCell(emi.rate, "rate", "number"));
-        tr.appendChild(makeCell(emi.startDate, "startDate", "date"));
-        tr.appendChild(makeCell(emi.endDate, "endDate", "date"));
-
-        const actionTd = document.createElement("td");
-        const delBtn = document.createElement("button");
-        delBtn.type = "button";
-        delBtn.className = "emi-delete-btn";
-        delBtn.textContent = "Del";
-        delBtn.addEventListener("click", async () => {
-          try {
-            await window.db.collection("emis").doc(emi.id).delete();
-            tr.remove();
-            updateEmiTotal();
-            if (!$("emiTableBody").children.length) $("emiEmpty").style.display = "block";
-          } catch (e) { console.error("Error deleting EMI:", e); }
+        visibleColumns.forEach((column) => {
+          if (column === "name") tr.appendChild(makeCell(emi.name, "name", "text"));
+          if (column === "amount") tr.appendChild(makeCell(emi.amount, "amount", "number"));
+          if (column === "rate") tr.appendChild(makeCell(emi.rate, "rate", "number"));
+          if (column === "startDate") tr.appendChild(makeCell(emi.startDate, "startDate", "date"));
+          if (column === "endDate") tr.appendChild(makeCell(emi.endDate, "endDate", "date"));
+          if (column === "actions") {
+            const actionTd = document.createElement("td");
+            const delBtn = document.createElement("button");
+            delBtn.type = "button";
+            delBtn.className = "emi-delete-btn";
+            delBtn.textContent = "Del";
+            delBtn.addEventListener("click", async () => {
+              try {
+                await window.db.collection("emis").doc(emi.id).delete();
+                tr.remove();
+                updateEmiTotal();
+                if (!$("emiTableBody").children.length) $("emiEmpty").style.display = "block";
+              } catch (e) { console.error("Error deleting EMI:", e); }
+            });
+            actionTd.appendChild(delBtn);
+            tr.appendChild(actionTd);
+          }
         });
-        actionTd.appendChild(delBtn);
-        tr.appendChild(actionTd);
 
         return tr;
       }
@@ -4323,7 +4461,7 @@
         const rows = $("emiTableBody").querySelectorAll("tr");
         let total = 0;
         rows.forEach((row) => {
-          const amountInput = row.querySelectorAll("input")[1];
+          const amountInput = row.querySelector(".emi-amount-input");
           if (amountInput) {
             const val = Number(amountInput.value);
             if (Number.isFinite(val)) total += val;
@@ -4339,6 +4477,29 @@
           totalCell.textContent = "\u2014";
         }
       }
+
+      $("emiShowRate").addEventListener("change", () => {
+        const config = getEmiColumnConfig();
+        config.rate = $("emiShowRate").checked;
+        setEmiColumnConfig(config);
+        loadEmis();
+      });
+
+      $("emiShowStartDate").addEventListener("change", () => {
+        const config = getEmiColumnConfig();
+        config.startDate = $("emiShowStartDate").checked;
+        setEmiColumnConfig(config);
+        loadEmis();
+      });
+
+      $("emiShowEndDate").addEventListener("change", () => {
+        const config = getEmiColumnConfig();
+        config.endDate = $("emiShowEndDate").checked;
+        setEmiColumnConfig(config);
+        loadEmis();
+      });
+
+      syncEmiColumnControls();
 
 
     </script>

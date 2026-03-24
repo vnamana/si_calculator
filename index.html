@@ -487,6 +487,27 @@
         cursor: pointer;
       }
 
+      .emi-actions-cell {
+        white-space: nowrap;
+      }
+
+      .emi-strike-toggle {
+        width: 14px;
+        height: 14px;
+        margin-right: 6px;
+        vertical-align: middle;
+        accent-color: #2c5364;
+        cursor: pointer;
+      }
+
+      .emi-table tr.emi-struck td {
+        opacity: 0.75;
+      }
+
+      .emi-table tr.emi-struck td input:not([type="checkbox"]) {
+        text-decoration: line-through;
+      }
+
       .emi-empty {
         color: #666;
         font-size: 0.82rem;
@@ -497,6 +518,37 @@
         color: #2c5364;
         font-size: 1rem;
         margin-bottom: 10px;
+      }
+
+      #mfPage .mf-card h3.mf-card-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 0;
+        cursor: pointer;
+      }
+
+      #mfPage .mf-card:not(.mf-card-collapsed) h3.mf-card-heading {
+        margin-bottom: 10px;
+      }
+
+      #mfPage .mf-card.mf-card-collapsed > :not(h3) {
+        display: none;
+      }
+
+      .mf-section-toggle {
+        border: 1px solid #2c5364;
+        background: #fff;
+        color: #2c5364;
+        border-radius: 6px;
+        width: 24px;
+        height: 24px;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        flex-shrink: 0;
       }
 
       .mf-results {
@@ -1311,7 +1363,7 @@
         <button class="site-nav-btn active" id="navNotesBtn" data-page="notesPage" type="button">Home / Notes</button>
         <button class="site-nav-btn" id="navSessionBtn" data-page="sessionPage" type="button">Session Notes</button>
         <button class="site-nav-btn" id="navCalculatorBtn" data-page="calculatorPage" type="button">Calculator</button>
-        <button class="site-nav-btn" id="navMfBtn" data-page="mfPage" type="button">Cash Flow</button>
+        <button class="site-nav-btn" id="navMfBtn" data-page="mfPage" type="button">Finance Planner</button>
       </nav>
 
       <section class="app-page active" id="notesPage">
@@ -3162,6 +3214,57 @@
         toggle.textContent = isCollapsed ? "Show" : "Hide";
       }
 
+      function setMfCardCollapsed(card, isCollapsed) {
+        card.classList.toggle("mf-card-collapsed", isCollapsed);
+        const title = card.dataset.sectionTitle || "section";
+        const toggleBtn = card.querySelector(".mf-section-toggle");
+        if (!toggleBtn) return;
+        toggleBtn.textContent = isCollapsed ? "+" : "−";
+        toggleBtn.setAttribute("aria-expanded", String(!isCollapsed));
+        toggleBtn.setAttribute(
+          "aria-label",
+          `${isCollapsed ? "Expand" : "Collapse"} ${title}`,
+        );
+      }
+
+      function initMfCardCollapseToggles() {
+        const mfPage = $("mfPage");
+        if (!mfPage) return;
+
+        mfPage.querySelectorAll(".mf-card").forEach((card) => {
+          const heading = card.querySelector("h3");
+          if (!heading) return;
+
+          card.dataset.sectionTitle = heading.textContent.trim();
+          heading.classList.add("mf-card-heading");
+
+          let toggleBtn = heading.querySelector(".mf-section-toggle");
+          if (!toggleBtn) {
+            toggleBtn = document.createElement("button");
+            toggleBtn.type = "button";
+            toggleBtn.className = "mf-section-toggle";
+            heading.appendChild(toggleBtn);
+          }
+
+          const toggle = () => {
+            const currentlyCollapsed = card.classList.contains("mf-card-collapsed");
+            setMfCardCollapsed(card, !currentlyCollapsed);
+          };
+
+          toggleBtn.addEventListener("click", (event) => {
+            event.stopPropagation();
+            toggle();
+          });
+
+          heading.addEventListener("click", (event) => {
+            if (event.target.closest(".mf-section-toggle")) return;
+            toggle();
+          });
+
+          setMfCardCollapsed(card, true);
+        });
+      }
+
       function setActivePage(pageId) {
         document.querySelectorAll(".app-page").forEach((page) => {
           page.classList.toggle("active", page.id === pageId);
@@ -3328,6 +3431,7 @@
       $("historySort").value = getHistorySortMode();
       syncSummaryColumnControls();
       syncQuantityFlagControls();
+      initMfCardCollapseToggles();
 
       // Authentication helpers
       function showCalculator() {
@@ -4336,6 +4440,15 @@
         const tr = document.createElement("tr");
         tr.dataset.id = emi.id;
 
+        function applyStrikeState(isStruck) {
+          tr.classList.toggle("emi-struck", Boolean(isStruck));
+          const strikeToggle = tr.querySelector(".emi-strike-toggle");
+          if (strikeToggle) {
+            strikeToggle.checked = Boolean(isStruck);
+          }
+          updateEmiTotal();
+        }
+
         function makeCell(value, field, type) {
           const td = document.createElement("td");
           const inp = document.createElement("input");
@@ -4406,11 +4519,35 @@
           if (column === "endDate") tr.appendChild(makeCell(emi.endDate, "endDate", "date"));
           if (column === "actions") {
             const actionTd = document.createElement("td");
+            actionTd.className = "emi-actions-cell";
+
+            const strikeToggle = document.createElement("input");
+            strikeToggle.type = "checkbox";
+            strikeToggle.className = "emi-strike-toggle";
+            strikeToggle.checked = Boolean(emi.struckOff);
+            strikeToggle.title = "Strike off EMI";
+            strikeToggle.setAttribute("aria-label", "Strike off EMI");
+            strikeToggle.addEventListener("change", async () => {
+              const nextValue = strikeToggle.checked;
+              applyStrikeState(nextValue);
+              try {
+                await window.db.collection("emis").doc(emi.id).update({ struckOff: nextValue });
+              } catch (e) {
+                applyStrikeState(!nextValue);
+                console.error("Error striking EMI:", e);
+              }
+            });
+
             const delBtn = document.createElement("button");
             delBtn.type = "button";
             delBtn.className = "emi-delete-btn";
             delBtn.textContent = "Del";
             delBtn.addEventListener("click", async () => {
+              const emiName = String((emi.name || "").trim());
+              const confirmationMessage = emiName
+                ? `Delete EMI \"${emiName}\"?`
+                : "Delete this EMI record?";
+              if (!confirm(confirmationMessage)) return;
               try {
                 await window.db.collection("emis").doc(emi.id).delete();
                 tr.remove();
@@ -4418,10 +4555,13 @@
                 if (!$("emiTableBody").children.length) $("emiEmpty").style.display = "block";
               } catch (e) { console.error("Error deleting EMI:", e); }
             });
+            actionTd.appendChild(strikeToggle);
             actionTd.appendChild(delBtn);
             tr.appendChild(actionTd);
           }
         });
+
+        applyStrikeState(emi.struckOff);
 
         return tr;
       }
@@ -4437,12 +4577,14 @@
             rate: 0,
             startDate: "",
             endDate: "",
+            struckOff: false,
             createdBy: uid,
             createdAtMs: Date.now(),
           };
           const ref = await window.db.collection("emis").add(payload);
           const emi = { id: ref.id, ...payload };
-          $('emiTableBody').appendChild(createEmiRow(emi));
+          const visibleColumns = getVisibleEmiColumns();
+          $('emiTableBody').appendChild(createEmiRow(emi, visibleColumns));
           $('emiEmpty').style.display = 'none';
           updateEmiTotal();
           // Focus name field of the new row
@@ -4461,6 +4603,7 @@
         const rows = $("emiTableBody").querySelectorAll("tr");
         let total = 0;
         rows.forEach((row) => {
+          if (row.classList.contains("emi-struck")) return;
           const amountInput = row.querySelector(".emi-amount-input");
           if (amountInput) {
             const val = Number(amountInput.value);

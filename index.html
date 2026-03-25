@@ -454,6 +454,14 @@
         min-width: 96px;
       }
 
+      .emi-field-rate {
+        min-width: 56px;
+      }
+
+      .emi-field-outstanding {
+        min-width: 124px;
+      }
+
       .emi-col-controls {
         display: flex;
         align-items: center;
@@ -476,25 +484,25 @@
         background: #f0f7fa;
       }
 
-      .emi-table .emi-delete-btn {
-        border: 1px solid #d9534f;
-        background: #fff;
-        color: #d9534f;
-        border-radius: 6px;
-        padding: 3px 8px;
-        font-size: 0.72rem;
-        font-weight: 600;
-        cursor: pointer;
+      .emi-actions-cell {
+        width: 34px;
+        min-width: 34px;
+        text-align: center;
+        white-space: nowrap;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
       }
 
-      .emi-actions-cell {
-        white-space: nowrap;
+      .emi-actions-head {
+        width: 34px;
+        min-width: 34px;
+        text-align: center !important;
       }
 
       .emi-strike-toggle {
         width: 14px;
         height: 14px;
-        margin-right: 6px;
+        margin-right: 0;
         vertical-align: middle;
         accent-color: #2c5364;
         cursor: pointer;
@@ -1326,6 +1334,14 @@
           font-size: 0.72rem;
         }
 
+        .emi-field-rate {
+          min-width: 52px;
+        }
+
+        .emi-field-outstanding {
+          min-width: 114px;
+        }
+
         .emi-col-controls {
           font-size: 0.7rem;
           gap: 6px;
@@ -1619,7 +1635,7 @@
 
         <!-- Todo Tasks -->
         <div class="mf-card">
-          <h3>Todo Tasks</h3>
+          <h3>ToDo</h3>
           <div class="todo-input-row">
             <input type="text" id="todoNewInput" placeholder="Add a task..." />
             <button type="button" id="todoAddBtn">Add</button>
@@ -2030,12 +2046,11 @@
 
       function getVisibleEmiColumns() {
         const config = getEmiColumnConfig();
-        const columns = ["name", "amount"];
+        const columns = ["actions", "name", "amount"];
         if (config.outstanding) columns.push("outstanding");
         if (config.rate) columns.push("rate");
         if (config.startDate) columns.push("startDate");
         if (config.endDate) columns.push("endDate");
-        columns.push("actions");
         return columns;
       }
 
@@ -2065,6 +2080,9 @@
         columns.forEach((column) => {
           const th = document.createElement("th");
           th.textContent = labels[column] || column;
+          if (column === "actions") {
+            th.classList.add("emi-actions-head");
+          }
           if (EMI_SORT_COLUMNS.has(column)) {
             th.className = "emi-sortable";
             th.dataset.emiSort = column;
@@ -4481,6 +4499,7 @@
           inp.value = String(normalizedValue);
           if (field === "amount") inp.classList.add("emi-amount-input");
           if (isDateField) inp.classList.add("emi-date-input");
+          inp.classList.add(`emi-field-${field}`);
           if (type === "number") { inp.min = "0"; inp.step = "any"; }
           if (isDateField) {
             inp.placeholder = "DD-MMM-YY";
@@ -4530,12 +4549,6 @@
         }
 
         visibleColumns.forEach((column) => {
-          if (column === "name") tr.appendChild(makeCell(emi.name, "name", "text"));
-          if (column === "amount") tr.appendChild(makeCell(emi.amount, "amount", "number"));
-          if (column === "outstanding") tr.appendChild(makeCell(emi.outstanding, "outstanding", "number"));
-          if (column === "rate") tr.appendChild(makeCell(emi.rate, "rate", "number"));
-          if (column === "startDate") tr.appendChild(makeCell(emi.startDate, "startDate", "date"));
-          if (column === "endDate") tr.appendChild(makeCell(emi.endDate, "endDate", "date"));
           if (column === "actions") {
             const actionTd = document.createElement("td");
             actionTd.className = "emi-actions-cell";
@@ -4551,33 +4564,22 @@
               applyStrikeState(nextValue);
               try {
                 await window.db.collection("emis").doc(emi.id).update({ struckOff: nextValue });
+                emi.struckOff = nextValue;
               } catch (e) {
                 applyStrikeState(!nextValue);
                 console.error("Error striking EMI:", e);
               }
             });
 
-            const delBtn = document.createElement("button");
-            delBtn.type = "button";
-            delBtn.className = "emi-delete-btn";
-            delBtn.textContent = "Del";
-            delBtn.addEventListener("click", async () => {
-              const emiName = String((emi.name || "").trim());
-              const confirmationMessage = emiName
-                ? `Delete EMI \"${emiName}\"?`
-                : "Delete this EMI record?";
-              if (!confirm(confirmationMessage)) return;
-              try {
-                await window.db.collection("emis").doc(emi.id).delete();
-                tr.remove();
-                updateEmiTotal();
-                if (!$("emiTableBody").children.length) $("emiEmpty").style.display = "block";
-              } catch (e) { console.error("Error deleting EMI:", e); }
-            });
             actionTd.appendChild(strikeToggle);
-            actionTd.appendChild(delBtn);
             tr.appendChild(actionTd);
           }
+          if (column === "name") tr.appendChild(makeCell(emi.name, "name", "text"));
+          if (column === "amount") tr.appendChild(makeCell(emi.amount, "amount", "number"));
+          if (column === "outstanding") tr.appendChild(makeCell(emi.outstanding, "outstanding", "number"));
+          if (column === "rate") tr.appendChild(makeCell(emi.rate, "rate", "number"));
+          if (column === "startDate") tr.appendChild(makeCell(emi.startDate, "startDate", "date"));
+          if (column === "endDate") tr.appendChild(makeCell(emi.endDate, "endDate", "date"));
         });
 
         applyStrikeState(emi.struckOff);

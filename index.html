@@ -890,6 +890,38 @@
         box-sizing: border-box;
       }
 
+      .history-item-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .history-item-head .history-item-title-input {
+        margin-bottom: 0;
+        flex: 1;
+      }
+
+      .history-item-toggle {
+        border: 1px solid #2c5364;
+        background: #fff;
+        color: #2c5364;
+        border-radius: 6px;
+        width: 24px;
+        height: 24px;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .history-item.collapsed .history-item-meta,
+      .history-item.collapsed .history-item-data,
+      .history-item.collapsed .history-item-note,
+      .history-item.collapsed .history-item-actions {
+        display: none;
+      }
+
       .history-item-title {
         color: #203a43;
         font-weight: 700;
@@ -1795,6 +1827,7 @@
       const HISTORY_SORT_KEY = "simple-interest-history-sort-v1";
       const SUMMARY_SORT_KEY = "simple-interest-summary-sort-v1";
       const SUMMARY_COLUMNS_KEY = "simple-interest-summary-columns-v1";
+      const HISTORY_ITEM_COLLAPSE_KEY = "simple-interest-history-item-collapse-v1";
       const EMI_SORT_KEY = "simple-interest-emi-sort-v1";
       const EMI_COLUMNS_KEY = "simple-interest-emi-columns-v1";
       const CALC_QTY_SYNC_KEY = "simple-interest-calc-qty-sync-v1";
@@ -2099,6 +2132,33 @@
 
       function setBooleanSetting(key, value) {
         localStorage.setItem(key, value ? "1" : "0");
+      }
+
+      function getHistoryItemCollapseMap() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(HISTORY_ITEM_COLLAPSE_KEY) || "null");
+          return stored && typeof stored === "object" ? stored : {};
+        } catch (error) {
+          return {};
+        }
+      }
+
+      function setHistoryItemCollapseMap(map) {
+        localStorage.setItem(HISTORY_ITEM_COLLAPSE_KEY, JSON.stringify(map));
+      }
+
+      function isHistoryItemCollapsed(entryId) {
+        const collapseMap = getHistoryItemCollapseMap();
+        if (typeof collapseMap[entryId] === "boolean") {
+          return collapseMap[entryId];
+        }
+        return true;
+      }
+
+      function setHistoryItemCollapsed(entryId, isCollapsed) {
+        const collapseMap = getHistoryItemCollapseMap();
+        collapseMap[entryId] = Boolean(isCollapsed);
+        setHistoryItemCollapseMap(collapseMap);
       }
 
       function isCalcQuantitySyncEnabled() {
@@ -2674,6 +2734,33 @@
             renameHistoryEntry(entry.id, titleEl.value);
           });
 
+          const itemHead = document.createElement("div");
+          itemHead.className = "history-item-head";
+
+          const itemToggleBtn = document.createElement("button");
+          itemToggleBtn.type = "button";
+          itemToggleBtn.className = "history-item-toggle";
+
+          const applyItemCollapsedState = (isCollapsed) => {
+            item.classList.toggle("collapsed", Boolean(isCollapsed));
+            itemToggleBtn.textContent = isCollapsed ? "+" : "−";
+            itemToggleBtn.setAttribute("aria-expanded", String(!isCollapsed));
+            itemToggleBtn.setAttribute(
+              "aria-label",
+              `${isCollapsed ? "Expand" : "Collapse"} note`,
+            );
+          };
+
+          itemToggleBtn.addEventListener("click", () => {
+            const isCollapsed = item.classList.contains("collapsed");
+            const next = !isCollapsed;
+            applyItemCollapsedState(next);
+            setHistoryItemCollapsed(entry.id, next);
+          });
+
+          itemHead.appendChild(titleEl);
+          itemHead.appendChild(itemToggleBtn);
+
           const metaEl = document.createElement("div");
           metaEl.className = "history-item-meta";
           metaEl.textContent = entry.savedAt;
@@ -2882,11 +2969,13 @@
           actionsEl.appendChild(moveDownButton);
           actionsEl.appendChild(deleteButton);
 
-          item.appendChild(titleEl);
+          item.appendChild(itemHead);
           item.appendChild(metaEl);
           item.appendChild(dataEl);
           item.appendChild(noteTextEl);
           item.appendChild(actionsEl);
+
+          applyItemCollapsedState(isHistoryItemCollapsed(entry.id));
           historyList.appendChild(item);
 
           summaryRowsData.push({ entry, scaled });
@@ -2923,11 +3012,18 @@
                 noteLink.addEventListener("click", () => {
                   setActivePage("sessionPage");
                   setHistoryCollapsed(false);
+                  setHistoryItemCollapsed(entry.id, false);
 
                   const targetItem = document.querySelector(
                     `.history-item[data-entry-id="${entry.id}"]`,
                   );
                   if (targetItem) {
+                    targetItem.classList.remove("collapsed");
+                    const targetToggleBtn = targetItem.querySelector(".history-item-toggle");
+                    if (targetToggleBtn) {
+                      targetToggleBtn.textContent = "−";
+                      targetToggleBtn.setAttribute("aria-expanded", "true");
+                    }
                     targetItem.scrollIntoView({ behavior: "smooth", block: "center" });
                   }
                 });

@@ -578,6 +578,41 @@
         font-size: 0.78rem;
       }
 
+      .sip-stepup-row {
+        align-items: flex-end;
+      }
+
+      .sip-stepup-enable {
+        margin-bottom: 8px;
+      }
+
+      .sip-stepup-wrap {
+        display: none;
+        min-width: 240px;
+      }
+
+      .sip-stepup-type-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 6px;
+        flex-wrap: wrap;
+      }
+
+      .sip-stepup-type-option {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #2c5364;
+        cursor: pointer;
+      }
+
+      .sip-stepup-type-option input {
+        margin: 0;
+      }
+
       .mf-dynamic-group {
         border: 1px solid #d8e8ee;
         border-radius: 8px;
@@ -1379,6 +1414,28 @@
           gap: 6px;
         }
 
+        .sip-stepup-row {
+          align-items: stretch;
+        }
+
+        .sip-stepup-enable {
+          margin-bottom: 0;
+        }
+
+        .sip-stepup-wrap {
+          min-width: 0;
+          width: 100%;
+        }
+
+        .sip-stepup-type-row {
+          gap: 10px;
+          margin-bottom: 4px;
+        }
+
+        .sip-stepup-type-option {
+          font-size: 0.74rem;
+        }
+
         .calc-qty-sync-toggle {
           gap: 4px;
           font-size: 0.7rem;
@@ -1732,6 +1789,32 @@
             <div class="form-group">
               <label for="sipYears">Duration (Years)</label>
               <input type="number" id="sipYears" placeholder="6" min="0" step="any" />
+            </div>
+          </div>
+          <div class="date-row sip-stepup-row">
+            <label class="qty-sync-toggle sip-stepup-enable" for="sipStepupEnabled">
+              <input type="checkbox" id="sipStepupEnabled" />
+              <span>Use annual step-up</span>
+            </label>
+            <div class="form-group sip-stepup-wrap" id="sipStepupWrap">
+              <div class="sip-stepup-type-row">
+                <label class="sip-stepup-type-option" for="sipStepupTypePercent">
+                  <input type="radio" name="sipStepupType" id="sipStepupTypePercent" value="percent" checked />
+                  <span>Percent</span>
+                </label>
+                <label class="sip-stepup-type-option" for="sipStepupTypeRupees">
+                  <input type="radio" name="sipStepupType" id="sipStepupTypeRupees" value="rupees" />
+                  <span>Rupees</span>
+                </label>
+              </div>
+              <div id="sipStepupRateWrap">
+                <label for="sipStepupRate">Step-up per year (%)</label>
+                <input type="number" id="sipStepupRate" placeholder="10" min="0" step="any" />
+              </div>
+              <div id="sipStepupAmountWrap" style="display:none">
+                <label for="sipStepupAmount">Step-up per year (₹)</label>
+                <input type="number" id="sipStepupAmount" placeholder="1000" min="0" step="any" />
+              </div>
             </div>
           </div>
           <div class="calc-action-row">
@@ -3917,21 +4000,58 @@
         const monthly = parseNonNegativeNumber($("sipMonthlyAmount").value);
         const annualRatePct = parseNonNegativeNumber($("sipAnnualRate").value);
         const years = parseNonNegativeNumber($("sipYears").value);
+        const stepupEnabled = $("sipStepupEnabled").checked;
+        const stepupType = stepupEnabled
+          ? (document.querySelector('input[name="sipStepupType"]:checked')?.value || "percent")
+          : "percent";
+        const stepupAnnualPct =
+          stepupEnabled && stepupType === "percent"
+            ? parseNonNegativeNumber($("sipStepupRate").value)
+            : 0;
+        const stepupAnnualAmount =
+          stepupEnabled && stepupType === "rupees"
+            ? parseNonNegativeNumber($("sipStepupAmount").value)
+            : 0;
 
         if (!Number.isFinite(monthly) || !Number.isFinite(annualRatePct) || !Number.isFinite(years) || years === 0) {
           alert("Enter valid SIP amount, annual return rate, and duration in years.");
           return;
         }
 
+        if (stepupEnabled && stepupType === "percent" && !Number.isFinite(stepupAnnualPct)) {
+          alert("Enter valid annual step-up percentage.");
+          return;
+        }
+
+        if (stepupEnabled && stepupType === "rupees" && !Number.isFinite(stepupAnnualAmount)) {
+          alert("Enter valid annual step-up amount in rupees.");
+          return;
+        }
+
         const months = Math.round(years * 12);
         const monthlyRate = annualRatePct / 100 / 12;
-        const totalInvested = monthly * months;
+        const annualStepupRate = stepupAnnualPct / 100;
 
+        let totalInvested = 0;
         let maturity = 0;
-        if (monthlyRate === 0) {
-          maturity = totalInvested;
-        } else {
-          maturity = monthly * (((1 + monthlyRate) ** months - 1) / monthlyRate);
+
+        for (let monthIndex = 0; monthIndex < months; monthIndex += 1) {
+          const yearIndex = Math.floor(monthIndex / 12);
+          const monthlyContribution = (() => {
+            if (!stepupEnabled) return monthly;
+            if (stepupType === "rupees") {
+              return monthly + stepupAnnualAmount * yearIndex;
+            }
+            return monthly * (1 + annualStepupRate) ** yearIndex;
+          })();
+          totalInvested += monthlyContribution;
+
+          if (monthlyRate === 0) {
+            maturity += monthlyContribution;
+          } else {
+            const monthsToGrow = months - monthIndex - 1;
+            maturity += monthlyContribution * (1 + monthlyRate) ** monthsToGrow;
+          }
         }
 
         const gain = maturity - totalInvested;
@@ -3939,6 +4059,24 @@
         $("sipGain").textContent = formatCurrency(gain);
         $("sipMaturity").textContent = formatCurrency(maturity);
         $("sipResults").classList.add("show");
+      });
+
+      function syncSipStepupVisibility() {
+        const enabled = $("sipStepupEnabled").checked;
+        $("sipStepupWrap").style.display = enabled ? "block" : "none";
+        const stepupType = document.querySelector('input[name="sipStepupType"]:checked')?.value || "percent";
+        $("sipStepupRateWrap").style.display = enabled && stepupType === "percent" ? "block" : "none";
+        $("sipStepupAmountWrap").style.display = enabled && stepupType === "rupees" ? "block" : "none";
+      }
+
+      $("sipStepupEnabled").addEventListener("change", () => {
+        syncSipStepupVisibility();
+      });
+
+      document.querySelectorAll('input[name="sipStepupType"]').forEach((radio) => {
+        radio.addEventListener("change", () => {
+          syncSipStepupVisibility();
+        });
       });
 
       $("calcLumpsumBtn").addEventListener("click", () => {
@@ -3965,6 +4103,11 @@
         $("sipMonthlyAmount").value = "";
         $("sipAnnualRate").value = "";
         $("sipYears").value = "";
+        $("sipStepupEnabled").checked = false;
+        $("sipStepupTypePercent").checked = true;
+        $("sipStepupRate").value = "";
+        $("sipStepupAmount").value = "";
+        syncSipStepupVisibility();
         $("sipInvested").textContent = "—";
         $("sipGain").textContent = "—";
         $("sipMaturity").textContent = "—";
@@ -3988,6 +4131,8 @@
       $("clearLumpsumBtn").addEventListener("click", () => {
         resetLumpsumCalculator();
       });
+
+      syncSipStepupVisibility();
 
       function addMoneyRow(containerId, labelPrefix) {
         const container = $(containerId);

@@ -18,6 +18,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script src="./firebase-config.js"></script>
     <style>
       * {
@@ -731,6 +732,32 @@
         font-size: 0.76rem;
       }
 
+      .mf-saved-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .mf-saved-chart-wrap {
+        margin-top: 8px;
+        padding: 8px;
+        border: 1px solid #d8e8ee;
+        border-radius: 8px;
+        background: #f8fcfe;
+        display: none;
+      }
+
+      .mf-saved-chart-wrap.open {
+        display: block;
+      }
+
+      .mf-saved-chart-canvas {
+        display: block;
+        width: 100% !important;
+        max-width: 290px;
+        height: 210px !important;
+        margin: 0 auto;
+      }
+
       .mf-edit-btn {
         border: 1px solid #2c5364;
         background: #fff;
@@ -746,6 +773,17 @@
         border: 1px solid #d9534f;
         background: #fff;
         color: #d9534f;
+        border-radius: 6px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        padding: 4px 8px;
+        cursor: pointer;
+      }
+
+      .mf-chart-btn {
+        border: 1px solid #60727a;
+        background: #fff;
+        color: #60727a;
         border-radius: 6px;
         font-size: 0.76rem;
         font-weight: 700;
@@ -3842,6 +3880,62 @@
 
       let currentCashflowRecordId = null;
 
+      function getCashflowPieSegments(record, ccBillsTotal) {
+        const income = Number(record.totalIncome || 0);
+        const outflow = Number(record.totalOutflow || 0);
+        const others = Math.max(0, outflow - ccBillsTotal);
+        const left = Number(record.leftover || 0);
+        return [
+          { label: "Income",   value: Math.max(0, income),      raw: income,      color: "#27ae60" },
+          { label: "Others",   value: others,                   raw: others,       color: "#8e44ad" },
+          { label: "CC Bills", value: Math.max(0, ccBillsTotal), raw: ccBillsTotal, color: "#f39c12" },
+          { label: "Left",     value: Math.max(0, left),        raw: left,         color: "#3498db" },
+        ];
+      }
+
+      function renderCashflowPieChart(canvas, segments) {
+        if (!window.Chart) return null;
+        // Set explicit pixel dimensions before Chart.js reads the canvas
+        canvas.width = 290;
+        canvas.height = 210;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+
+        return new window.Chart(ctx, {
+          type: "pie",
+          data: {
+            labels: segments.map((segment) => segment.label),
+            datasets: [
+              {
+                data: segments.map((segment) => segment.value),
+                backgroundColor: segments.map((segment) => segment.color),
+                borderColor: "#ffffff",
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: { boxWidth: 10, font: { size: 11 } },
+              },
+              tooltip: {
+                callbacks: {
+                  label(context) {
+                    const idx = context.dataIndex;
+                    const section = segments[idx];
+                    return `${section.label}: ${formatCurrency(section.raw)}`;
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
       function createMoneyRowElement(namePlaceholder, value = "", name = "") {
         const row = document.createElement("div");
         row.className = "mf-money-row";
@@ -4030,11 +4124,16 @@
               deleteCashflowRecord(record.id);
             });
 
+            const chartBtn = document.createElement("button");
+            chartBtn.type = "button";
+            chartBtn.className = "mf-chart-btn";
+            chartBtn.textContent = "Chart";
+
             const actions = document.createElement("div");
-            actions.style.display = "flex";
-            actions.style.gap = "6px";
+            actions.className = "mf-saved-actions";
             actions.appendChild(editBtn);
             actions.appendChild(deleteBtn);
+            actions.appendChild(chartBtn);
 
             head.appendChild(name);
             head.appendChild(actions);
@@ -4047,13 +4146,49 @@
               return sum + (Number.isFinite(amount) ? amount : 0);
             }, 0);
 
+            const otherExpensesTotal = Math.max(0, Number(record.totalOutflow || 0) - ccBillsTotal);
+
             const meta = document.createElement("div");
             meta.className = "mf-saved-meta";
-            meta.textContent = `Income: ${formatCurrency(Number(record.totalIncome || 0))} | Outflow: ${formatCurrency(Number(record.totalOutflow || 0))} | CC Bills: ${formatCurrency(ccBillsTotal)} | Left: ${formatCurrency(Number(record.leftover || 0))}`;
+            meta.textContent = `Income: ${formatCurrency(Number(record.totalIncome || 0))} | Expenses: ${formatCurrency(Number(record.totalOutflow || 0))} | Others: ${formatCurrency(otherExpensesTotal)} | CC Bills: ${formatCurrency(ccBillsTotal)} | Left: ${formatCurrency(Number(record.leftover || 0))}`;
+
+            const chartWrap = document.createElement("div");
+            chartWrap.className = "mf-saved-chart-wrap";
+            const chartCanvas = document.createElement("canvas");
+            chartCanvas.className = "mf-saved-chart-canvas";
+            chartWrap.appendChild(chartCanvas);
+
+            let recordChart = null;
+            chartBtn.addEventListener("click", () => {
+              const shouldOpen = !chartWrap.classList.contains("open");
+              chartWrap.classList.toggle("open", shouldOpen);
+              chartBtn.textContent = shouldOpen ? "Hide Chart" : "Chart";
+              if (!shouldOpen) return;
+              if (recordChart) return;
+              const segments = getCashflowPieSegments(record, ccBillsTotal);
+              const hasPositiveValue = segments.some((segment) => segment.value > 0);
+              if (!hasPositiveValue) {
+                chartWrap.innerHTML = "<p style='font-size:0.78rem;color:#888;text-align:center;padding:8px 0'>No values available for chart.</p>";
+                return;
+              }
+              recordChart = renderCashflowPieChart(chartCanvas, segments);
+            });
 
             item.appendChild(head);
             item.appendChild(meta);
+            item.appendChild(chartWrap);
             list.appendChild(item);
+
+            // Auto-render chart immediately
+            requestAnimationFrame(() => {
+              const segments = getCashflowPieSegments(record, ccBillsTotal);
+              const hasPositiveValue = segments.some((segment) => segment.value > 0);
+              if (hasPositiveValue) {
+                recordChart = renderCashflowPieChart(chartCanvas, segments);
+              } else {
+                chartWrap.textContent = "No values available for chart.";
+              }
+            });
           });
         } catch (error) {
           console.error("Error loading cashflow records:", error);

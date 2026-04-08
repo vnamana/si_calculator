@@ -3994,9 +3994,17 @@
             head.appendChild(name);
             head.appendChild(actions);
 
+            const ccBillsItems = Array.isArray(record.cardBills)
+              ? record.cardBills
+              : (Array.isArray(record.bills) ? record.bills : []);
+            const ccBillsTotal = ccBillsItems.reduce((sum, item) => {
+              const amount = Number(item && item.amount);
+              return sum + (Number.isFinite(amount) ? amount : 0);
+            }, 0);
+
             const meta = document.createElement("div");
             meta.className = "mf-saved-meta";
-            meta.textContent = `Income: ${formatCurrency(Number(record.totalIncome || 0))} | Outflow: ${formatCurrency(Number(record.totalOutflow || 0))} | Left: ${formatCurrency(Number(record.leftover || 0))}`;
+            meta.textContent = `Income: ${formatCurrency(Number(record.totalIncome || 0))} | Outflow: ${formatCurrency(Number(record.totalOutflow || 0))} | CC Bills: ${formatCurrency(ccBillsTotal)} | Left: ${formatCurrency(Number(record.leftover || 0))}`;
 
             item.appendChild(head);
             item.appendChild(meta);

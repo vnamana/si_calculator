@@ -1052,7 +1052,23 @@
         display: flex;
         align-items: center;
         justify-content: flex-end;
+        gap: 6px;
         margin-top: 8px;
+      }
+
+      .history-item-summary-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.76rem;
+        color: #2c5364;
+        font-weight: 600;
+        margin-right: 4px;
+        user-select: none;
+      }
+
+      .history-item-summary-toggle input[type="checkbox"] {
+        margin: 0;
       }
 
       .history-item-qty {
@@ -2718,6 +2734,7 @@
               ...entry,
               basePrincipal,
               baseMaturity,
+              showInSummary: entry.showInSummary !== false,
               quantity,
               rawStartDate,
               rawEndDate,
@@ -3018,6 +3035,19 @@
           const actionsEl = document.createElement("div");
           actionsEl.className = "history-item-actions";
 
+          const summaryToggleLabel = document.createElement("label");
+          summaryToggleLabel.className = "history-item-summary-toggle";
+          const summaryToggleInput = document.createElement("input");
+          summaryToggleInput.type = "checkbox";
+          summaryToggleInput.checked = entry.showInSummary === false;
+          summaryToggleInput.addEventListener("change", () => {
+            updateHistorySummaryVisibility(entry.id, !summaryToggleInput.checked);
+          });
+          const summaryToggleText = document.createElement("span");
+          summaryToggleText.textContent = "Hide Note";
+          summaryToggleLabel.appendChild(summaryToggleInput);
+          summaryToggleLabel.appendChild(summaryToggleText);
+
           const qtyInput = document.createElement("input");
           qtyInput.type = "number";
           qtyInput.className = "history-item-qty";
@@ -3058,6 +3088,7 @@
             deleteHistoryEntry(entry.id);
           });
 
+          actionsEl.appendChild(summaryToggleLabel);
           actionsEl.appendChild(qtyInput);
           actionsEl.appendChild(moveUpButton);
           actionsEl.appendChild(moveDownButton);
@@ -3072,19 +3103,21 @@
           applyItemCollapsedState(isHistoryItemCollapsed(entry.id));
           historyList.appendChild(item);
 
-          summaryRowsData.push({ entry, scaled });
+          if (entry.showInSummary !== false) {
+            summaryRowsData.push({ entry, scaled });
 
-          totalPrincipal += scaled.principal;
-          totalMaturity += scaled.maturity;
+            totalPrincipal += scaled.principal;
+            totalMaturity += scaled.maturity;
 
-          if (Number.isFinite(entry.interestAmountRs)) {
-            totalInterestAmount += entry.interestAmountRs;
-          }
+            if (Number.isFinite(entry.interestAmountRs)) {
+              totalInterestAmount += entry.interestAmountRs;
+            }
 
-          const entryRate = parseRatePercent(entry.rate);
-          if (Number.isFinite(entryRate) && Number.isFinite(scaled.principal)) {
-            weightedRateNumerator += entryRate * scaled.principal;
-            weightedRateDenominator += scaled.principal;
+            const entryRate = parseRatePercent(entry.rate);
+            if (Number.isFinite(entryRate) && Number.isFinite(scaled.principal)) {
+              weightedRateNumerator += entryRate * scaled.principal;
+              weightedRateDenominator += scaled.principal;
+            }
           }
         });
 
@@ -3193,6 +3226,18 @@
             .update({ noteText: noteText.trim() });
         } catch (error) {
           console.error("Error updating note text:", error);
+        }
+      }
+
+      async function updateHistorySummaryVisibility(entryId, showInSummary) {
+        try {
+          await window.db
+            .collection("history")
+            .doc(entryId)
+            .update({ showInSummary: Boolean(showInSummary) });
+          await renderHistoryPreservingViewport();
+        } catch (error) {
+          console.error("Error updating summary visibility:", error);
         }
       }
 
@@ -4457,6 +4502,7 @@
           noteName:
             noteInput || `Calculation ${new Date().toLocaleTimeString()}`,
           savedAt: new Date().toLocaleString(),
+          showInSummary: true,
           basePrincipal: principal / quantity,
           baseMaturity: maturity / quantity,
           quantity,

@@ -377,24 +377,35 @@
       }
 
       .todo-item-actions button {
-        border: 1px solid #d8e8ee;
-        background: #fff;
-        border-radius: 6px;
+        border: 1px solid transparent;
+        background: transparent;
+        border-radius: 4px;
         padding: 3px 8px;
         font-size: 0.72rem;
-        font-weight: 600;
         cursor: pointer;
         font-family: inherit;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        transition: opacity 0.2s;
+      }
+
+      .todo-icon-btn {
+        padding: 2px 4px !important;
+        font-size: 1rem !important;
+      }
+
+      .todo-item-actions button:hover {
+        opacity: 0.75;
       }
 
       .todo-edit-btn {
         color: #2c5364;
-        border-color: #2c5364 !important;
       }
 
       .todo-delete-btn {
         color: #d9534f;
-        border-color: #d9534f !important;
       }
 
       .emi-table {
@@ -4539,8 +4550,9 @@
 
         const delBtn = document.createElement("button");
         delBtn.type = "button";
-        delBtn.className = "todo-delete-btn";
-        delBtn.textContent = "Delete";
+        delBtn.className = "todo-delete-btn todo-icon-btn";
+        delBtn.textContent = "🗑️";
+        delBtn.title = "Delete";
         delBtn.addEventListener("click", async () => {
           try {
             await window.db.collection("todos").doc(todo.id).delete();
@@ -4551,8 +4563,9 @@
 
         const editBtn = document.createElement("button");
         editBtn.type = "button";
-        editBtn.className = "todo-edit-btn";
-        editBtn.textContent = "Edit";
+        editBtn.className = "todo-edit-btn todo-icon-btn";
+        editBtn.textContent = "✏️";
+        editBtn.title = "Edit";
         editBtn.addEventListener("click", () => {
           textInput.focus();
           textInput.select();

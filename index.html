@@ -409,6 +409,169 @@
         color: #d9534f;
       }
 
+      .due-input-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+
+      .due-input-row input {
+        padding: 8px 10px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-family: inherit;
+        outline: none;
+      }
+
+      .due-input-row input:focus {
+        border-color: #2c5364;
+      }
+
+      #dueTitleInput {
+        flex: 1;
+        min-width: 180px;
+      }
+
+      #dueDayInput {
+        width: 96px;
+      }
+
+      #dueNoteInput {
+        flex-basis: 100%;
+      }
+
+      .due-input-row button {
+        padding: 8px 14px;
+        border: none;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #203a43, #2c5364);
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .due-list {
+        list-style: none;
+        display: grid;
+        gap: 6px;
+      }
+
+      .due-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+        border: 1px solid #d8e8ee;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .due-item-main {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .due-item-title {
+        color: #2c5364;
+        font-weight: 700;
+        font-size: 0.84rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .due-item-date {
+        color: #60727a;
+        font-size: 0.76rem;
+      }
+
+      .due-item-note {
+        color: #60727a;
+        font-size: 0.76rem;
+        font-style: italic;
+        word-break: break-word;
+      }
+
+      .due-delete-btn {
+        border: 1px solid #d9534f;
+        background: #fff;
+        color: #d9534f;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 4px 8px;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .due-edit-btn,
+      .due-save-btn,
+      .due-cancel-btn {
+        border: 1px solid #2c5364;
+        background: #fff;
+        color: #2c5364;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 4px 8px;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .due-cancel-btn {
+        border-color: #60727a;
+        color: #60727a;
+      }
+
+      .due-item-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .due-edit-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: wrap;
+        width: 100%;
+      }
+
+      .due-edit-title {
+        flex: 1;
+        min-width: 140px;
+        border: 1px solid #d8e8ee;
+        border-radius: 6px;
+        padding: 5px 7px;
+        font-size: 0.78rem;
+        font-family: inherit;
+      }
+
+      .due-edit-day {
+        width: 72px;
+        border: 1px solid #d8e8ee;
+        border-radius: 6px;
+        padding: 5px 7px;
+        font-size: 0.78rem;
+        font-family: inherit;
+      }
+
+      .due-edit-note {
+        width: 100%;
+        border: 1px solid #d8e8ee;
+        border-radius: 6px;
+        padding: 5px 7px;
+        font-size: 0.78rem;
+        font-family: inherit;
+      }
+
       .emi-table {
         width: 100%;
         border-collapse: collapse;
@@ -1785,6 +1948,33 @@
             <div class="result-row"><span class="label">Net Balance</span><span class="value" id="leftoverValue">—</span></div>
           </div>
           <div class="mf-saved-list" id="cashflowSavedList"></div>
+        </div>
+
+        <div class="mf-card">
+          <h3>Due Dates</h3>
+          <div class="due-input-row">
+            <input
+              type="text"
+              id="dueTitleInput"
+              placeholder="Title (e.g. Swiggy Credit Card)"
+            />
+            <input
+              type="number"
+              id="dueDayInput"
+              placeholder="Day"
+              min="1"
+              max="31"
+              step="1"
+            />
+            <input
+              type="text"
+              id="dueNoteInput"
+              placeholder="Small note (optional)"
+            />
+            <button type="button" id="dueAddBtn">Add</button>
+          </div>
+          <ul class="due-list" id="dueList"></ul>
+          <p class="emi-empty" id="dueEmpty" style="display:none">No due dates yet.</p>
         </div>
 
         <!-- Todo Tasks -->
@@ -3809,6 +3999,7 @@
           }
           showCalculator();
           await loadCashflowRecords();
+          await loadDueDates();
           await loadTodos();
           await loadEmis();
           if (signOutBtn) {
@@ -3824,6 +4015,7 @@
         } else {
           showAuthUI();
           $("cashflowSavedList").innerHTML = "";
+          $("dueList").innerHTML = "";
           $("todoList").innerHTML = "";
           $("emiTableBody").innerHTML = "";
           setCashflowEditMode(null);
@@ -4513,6 +4705,303 @@
         const year = String(date.getFullYear()).slice(-2);
         return `${day}-${month}-${year}`;
       }
+
+      function formatOrdinalDay(dayValue) {
+        const day = Number(dayValue);
+        if (!Number.isFinite(day)) return "—";
+        const mod100 = day % 100;
+        if (mod100 >= 11 && mod100 <= 13) return `${day}th`;
+        const mod10 = day % 10;
+        if (mod10 === 1) return `${day}st`;
+        if (mod10 === 2) return `${day}nd`;
+        if (mod10 === 3) return `${day}rd`;
+        return `${day}th`;
+      }
+
+      function formatOrdinalDayBold(dayValue) {
+        const day = Number(dayValue);
+        let suffix;
+        if (!Number.isFinite(day)) return "—";
+        const mod100 = day % 100;
+        if (mod100 >= 11 && mod100 <= 13) suffix = 'th';
+        else {
+          const mod10 = day % 10;
+          if (mod10 === 1) suffix = 'st';
+          else if (mod10 === 2) suffix = 'nd';
+          else if (mod10 === 3) suffix = 'rd';
+          else suffix = 'th';
+        }
+        return `<b>${day}</b>${suffix}`;
+      }
+
+      async function loadDueDates() {
+        const list = $("dueList");
+        list.innerHTML = "";
+
+        if (!window.auth.currentUser) {
+          $("dueEmpty").style.display = "block";
+          return;
+        }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const snap = await window.db
+            .collection("dueDates")
+            .where("createdBy", "==", uid)
+            .get();
+
+          const dueDates = snap.docs
+            .map((doc) => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => {
+              const dayDiff = Number(a.dueDay || 0) - Number(b.dueDay || 0);
+              if (dayDiff !== 0) return dayDiff;
+              return String(a.title || "").localeCompare(String(b.title || ""), undefined, { numeric: true });
+            });
+
+          $("dueEmpty").style.display = dueDates.length ? "none" : "block";
+          dueDates.forEach((dueDateItem) => {
+            list.appendChild(createDueDateItem(dueDateItem));
+          });
+        } catch (error) {
+          console.error("Error loading due dates:", error);
+          $("dueEmpty").style.display = "block";
+        }
+      }
+
+      function createDueDateItem(dueDateItem) {
+        const li = document.createElement("li");
+        li.className = "due-item";
+        li.dataset.id = dueDateItem.id;
+
+        const main = document.createElement("div");
+        main.className = "due-item-main";
+
+        const title = document.createElement("div");
+        title.className = "due-item-title";
+        title.textContent = dueDateItem.title || "Untitled";
+
+        const dateText = document.createElement("div");
+        dateText.className = "due-item-date";
+        dateText.innerHTML = `${formatOrdinalDayBold(dueDateItem.dueDay)} of every month`;
+
+        const noteText = document.createElement("div");
+        noteText.className = "due-item-note";
+        noteText.textContent = dueDateItem.noteText ? `Note: ${dueDateItem.noteText}` : "";
+
+        main.appendChild(title);
+        main.appendChild(dateText);
+        if (dueDateItem.noteText) {
+          main.appendChild(noteText);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "due-item-actions";
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "due-edit-btn";
+        editBtn.textContent = "Edit";
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "due-delete-btn";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", async () => {
+          try {
+            await window.db.collection("dueDates").doc(dueDateItem.id).delete();
+            li.remove();
+            if (!$("dueList").children.length) {
+              $("dueEmpty").style.display = "block";
+            }
+          } catch (error) {
+            console.error("Error deleting due date:", error);
+          }
+        });
+
+        editBtn.addEventListener("click", () => {
+          const editRow = document.createElement("div");
+          editRow.className = "due-edit-row";
+
+          const titleInput = document.createElement("input");
+          titleInput.type = "text";
+          titleInput.className = "due-edit-title";
+          titleInput.value = dueDateItem.title || "";
+
+          const dayInput = document.createElement("input");
+          dayInput.type = "number";
+          dayInput.className = "due-edit-day";
+          dayInput.min = "1";
+          dayInput.max = "31";
+          dayInput.step = "1";
+          dayInput.value = String(Number(dueDateItem.dueDay || 1));
+
+          const noteInput = document.createElement("input");
+          noteInput.type = "text";
+          noteInput.className = "due-edit-note";
+          noteInput.placeholder = "Small note (optional)";
+          noteInput.value = dueDateItem.noteText || "";
+
+          const saveBtn = document.createElement("button");
+          saveBtn.type = "button";
+          saveBtn.className = "due-save-btn";
+          saveBtn.textContent = "Save";
+
+          const cancelBtn = document.createElement("button");
+          cancelBtn.type = "button";
+          cancelBtn.className = "due-cancel-btn";
+          cancelBtn.textContent = "Cancel";
+
+          const restoreViewMode = () => {
+            main.innerHTML = "";
+            title.textContent = dueDateItem.title || "Untitled";
+            dateText.innerHTML = `${formatOrdinalDayBold(dueDateItem.dueDay)} of every month`;
+            noteText.textContent = dueDateItem.noteText ? `Note: ${dueDateItem.noteText}` : "";
+            main.appendChild(title);
+            main.appendChild(dateText);
+            if (dueDateItem.noteText) {
+              main.appendChild(noteText);
+            }
+
+            actions.innerHTML = "";
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+          };
+
+          saveBtn.addEventListener("click", async () => {
+            const nextTitle = titleInput.value.trim();
+            const nextDay = Math.floor(Number(dayInput.value));
+            const nextNoteText = noteInput.value.trim();
+
+            if (!nextTitle) {
+              alert("Enter a title.");
+              return;
+            }
+            if (!Number.isFinite(nextDay) || nextDay < 1 || nextDay > 31) {
+              alert("Enter a valid due day between 1 and 31.");
+              return;
+            }
+
+            try {
+              await window.db.collection("dueDates").doc(dueDateItem.id).update({
+                title: nextTitle,
+                dueDay: nextDay,
+                noteText: nextNoteText,
+              });
+              dueDateItem.title = nextTitle;
+              dueDateItem.dueDay = nextDay;
+              dueDateItem.noteText = nextNoteText;
+              await loadDueDates();
+            } catch (error) {
+              console.error("Error updating due date:", error);
+              alert("Failed to update due date.");
+            }
+          });
+
+          cancelBtn.addEventListener("click", () => {
+            restoreViewMode();
+          });
+
+          dayInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+              saveBtn.click();
+            }
+          });
+
+          titleInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+              saveBtn.click();
+            }
+          });
+
+          noteInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+              saveBtn.click();
+            }
+          });
+
+          main.innerHTML = "";
+          editRow.appendChild(titleInput);
+          editRow.appendChild(dayInput);
+          editRow.appendChild(noteInput);
+          main.appendChild(editRow);
+
+          actions.innerHTML = "";
+          actions.appendChild(saveBtn);
+          actions.appendChild(cancelBtn);
+
+          titleInput.focus();
+          titleInput.select();
+        });
+
+        li.appendChild(main);
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+        li.appendChild(actions);
+        return li;
+      }
+
+      $("dueAddBtn").addEventListener("click", async () => {
+        if (!window.auth.currentUser) {
+          alert("Sign in to add due dates.");
+          return;
+        }
+
+        const titleInput = $("dueTitleInput");
+        const dayInput = $("dueDayInput");
+        const noteInput = $("dueNoteInput");
+        const title = titleInput.value.trim();
+        const dueDay = Math.floor(Number(dayInput.value));
+        const noteText = noteInput.value.trim();
+
+        if (!title) {
+          alert("Enter a title.");
+          return;
+        }
+
+        if (!Number.isFinite(dueDay) || dueDay < 1 || dueDay > 31) {
+          alert("Enter a valid due day between 1 and 31.");
+          return;
+        }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const payload = {
+            title,
+            dueDay,
+            noteText,
+            createdBy: uid,
+            createdAtMs: Date.now(),
+          };
+          const ref = await window.db.collection("dueDates").add(payload);
+          $("dueList").appendChild(createDueDateItem({ id: ref.id, ...payload }));
+          $("dueEmpty").style.display = "none";
+          titleInput.value = "";
+          dayInput.value = "";
+          noteInput.value = "";
+          titleInput.focus();
+        } catch (error) {
+          console.error("Error adding due date:", error);
+          alert("Failed to add due date.");
+        }
+      });
+
+      $("dueTitleInput").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          $("dueAddBtn").click();
+        }
+      });
+
+      $("dueDayInput").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          $("dueAddBtn").click();
+        }
+      });
+
+      $("dueNoteInput").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          $("dueAddBtn").click();
+        }
+      });
 
       $("calcBtn").addEventListener("click", () => {
         // Clear previous

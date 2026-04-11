@@ -1988,6 +1988,17 @@
           <p class="emi-empty" id="todoEmpty" style="display:none">No tasks yet.</p>
         </div>
 
+        <!-- Can Wait Tasks -->
+        <div class="mf-card">
+          <h3>Can wait</h3>
+          <div class="todo-input-row">
+            <input type="text" id="waitNewInput" placeholder="Add a task..." />
+            <button type="button" id="waitAddBtn">Add</button>
+          </div>
+          <ul class="todo-list" id="waitList"></ul>
+          <p class="emi-empty" id="waitEmpty" style="display:none">No tasks yet.</p>
+        </div>
+
         <!-- EMI Tracker -->
         <div class="mf-card">
           <h3>EMI Tracker</h3>
@@ -4001,6 +4012,7 @@
           await loadCashflowRecords();
           await loadDueDates();
           await loadTodos();
+          await loadWaitTasks();
           await loadEmis();
           if (signOutBtn) {
             signOutBtn.style.display = "block";
@@ -4017,6 +4029,7 @@
           $("cashflowSavedList").innerHTML = "";
           $("dueList").innerHTML = "";
           $("todoList").innerHTML = "";
+          $("waitList").innerHTML = "";
           $("emiTableBody").innerHTML = "";
           setCashflowEditMode(null);
           if (signOutBtn) {
@@ -5284,6 +5297,130 @@
 
       $("todoNewInput").addEventListener("keydown", (e) => {
         if (e.key === "Enter") $("todoAddBtn").click();
+      });
+
+      // ─── Can Wait Tasks ─────────────────────────────────────
+      async function loadWaitTasks() {
+        const list = $("waitList");
+        list.innerHTML = "";
+
+        if (!window.auth.currentUser) {
+          $("waitEmpty").style.display = "block";
+          return;
+        }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const snap = await window.db
+            .collection("waitTasks")
+            .where("createdBy", "==", uid)
+            .orderBy("createdAtMs", "asc")
+            .get();
+
+          const tasks = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+          $("waitEmpty").style.display = tasks.length ? "none" : "block";
+
+          tasks.forEach((task) => {
+            list.appendChild(createWaitTaskItem(task));
+          });
+        } catch (error) {
+          console.error("Error loading wait tasks:", error);
+          $("waitEmpty").style.display = "block";
+        }
+      }
+
+      function createWaitTaskItem(task) {
+        const li = document.createElement("li");
+        li.className = "todo-item" + (task.done ? " completed" : "");
+        li.dataset.id = task.id;
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = Boolean(task.done);
+        cb.addEventListener("change", async () => {
+          try {
+            await window.db.collection("waitTasks").doc(task.id).update({ done: cb.checked });
+            li.classList.toggle("completed", cb.checked);
+          } catch (e) { console.error("Error toggling wait task:", e); }
+        });
+
+        const textInput = document.createElement("input");
+        textInput.type = "text";
+        textInput.className = "todo-text";
+        textInput.value = task.text || "";
+        textInput.addEventListener("blur", async () => {
+          const newText = textInput.value.trim();
+          if (!newText || newText === (task.text || "")) return;
+          try {
+            await window.db.collection("waitTasks").doc(task.id).update({ text: newText });
+            task.text = newText;
+          } catch (e) { console.error("Error updating wait task text:", e); }
+        });
+        textInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") textInput.blur();
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "todo-item-actions";
+
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "todo-delete-btn todo-icon-btn";
+        delBtn.textContent = "🗑️";
+        delBtn.title = "Delete";
+        delBtn.addEventListener("click", async () => {
+          try {
+            await window.db.collection("waitTasks").doc(task.id).delete();
+            li.remove();
+            if (!$("waitList").children.length) $("waitEmpty").style.display = "block";
+          } catch (e) { console.error("Error deleting wait task:", e); }
+        });
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "todo-edit-btn todo-icon-btn";
+        editBtn.textContent = "✏️";
+        editBtn.title = "Edit";
+        editBtn.addEventListener("click", () => {
+          textInput.focus();
+          textInput.select();
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+        li.appendChild(cb);
+        li.appendChild(textInput);
+        li.appendChild(actions);
+        return li;
+      }
+
+      $("waitAddBtn").addEventListener("click", async () => {
+        const input = $("waitNewInput");
+        const text = input.value.trim();
+        if (!text) return;
+        if (!window.auth.currentUser) { alert("Sign in to add tasks."); return; }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const payload = {
+            text,
+            done: false,
+            createdBy: uid,
+            createdAtMs: Date.now(),
+          };
+          const ref = await window.db.collection("waitTasks").add(payload);
+          const task = { id: ref.id, ...payload };
+          $("waitList").appendChild(createWaitTaskItem(task));
+          $("waitEmpty").style.display = "none";
+          input.value = "";
+        } catch (e) {
+          console.error("Error adding wait task:", e);
+          alert("Failed to add task.");
+        }
+      });
+
+      $("waitNewInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") $("waitAddBtn").click();
       });
 
       // ─── EMI Tracker ────────────────────────────────────────

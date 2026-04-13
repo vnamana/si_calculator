@@ -5742,6 +5742,20 @@
 
       syncEmiColumnControls();
 
+      function applyAutofillGuards(root = document) {
+        root
+          .querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea')
+          .forEach((inp) => {
+            inp.setAttribute("autocomplete", "off");
+            inp.setAttribute("autocorrect", "off");
+            inp.setAttribute("autocapitalize", "none");
+            inp.setAttribute("spellcheck", "false");
+            inp.setAttribute("data-lpignore", "true");
+          });
+      }
+
+      applyAutofillGuards();
+
 
     </script>
   </body>

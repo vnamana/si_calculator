@@ -1988,6 +1988,17 @@
           <p class="emi-empty" id="todoEmpty" style="display:none">No tasks yet.</p>
         </div>
 
+        <!-- Movies -->
+        <div class="mf-card">
+          <h3>Movies</h3>
+          <div class="todo-input-row">
+            <input type="text" id="movieNewInput" placeholder="Add a movie..." />
+            <button type="button" id="movieAddBtn">Add</button>
+          </div>
+          <ul class="todo-list" id="movieList"></ul>
+          <p class="emi-empty" id="movieEmpty" style="display:none">No movies yet.</p>
+        </div>
+
         <!-- Can Wait Tasks -->
         <div class="mf-card">
           <h3>Can wait</h3>
@@ -4012,6 +4023,7 @@
           await loadCashflowRecords();
           await loadDueDates();
           await loadTodos();
+          await loadMovies();
           await loadWaitTasks();
           await loadEmis();
           if (signOutBtn) {
@@ -4029,6 +4041,7 @@
           $("cashflowSavedList").innerHTML = "";
           $("dueList").innerHTML = "";
           $("todoList").innerHTML = "";
+          $("movieList").innerHTML = "";
           $("waitList").innerHTML = "";
           $("emiTableBody").innerHTML = "";
           setCashflowEditMode(null);
@@ -5297,6 +5310,130 @@
 
       $("todoNewInput").addEventListener("keydown", (e) => {
         if (e.key === "Enter") $("todoAddBtn").click();
+      });
+
+      // ─── Movies ──────────────────────────────────────────────
+      async function loadMovies() {
+        const list = $("movieList");
+        list.innerHTML = "";
+
+        if (!window.auth.currentUser) {
+          $("movieEmpty").style.display = "block";
+          return;
+        }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const snap = await window.db
+            .collection("movies")
+            .where("createdBy", "==", uid)
+            .orderBy("createdAtMs", "asc")
+            .get();
+
+          const movies = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+          $("movieEmpty").style.display = movies.length ? "none" : "block";
+
+          movies.forEach((movie) => {
+            list.appendChild(createMovieItem(movie));
+          });
+        } catch (error) {
+          console.error("Error loading movies:", error);
+          $("movieEmpty").style.display = "block";
+        }
+      }
+
+      function createMovieItem(movie) {
+        const li = document.createElement("li");
+        li.className = "todo-item" + (movie.watched ? " completed" : "");
+        li.dataset.id = movie.id;
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = Boolean(movie.watched);
+        cb.addEventListener("change", async () => {
+          try {
+            await window.db.collection("movies").doc(movie.id).update({ watched: cb.checked });
+            li.classList.toggle("completed", cb.checked);
+          } catch (e) { console.error("Error toggling movie:", e); }
+        });
+
+        const textInput = document.createElement("input");
+        textInput.type = "text";
+        textInput.className = "todo-text";
+        textInput.value = movie.title || "";
+        textInput.addEventListener("blur", async () => {
+          const newTitle = textInput.value.trim();
+          if (!newTitle || newTitle === (movie.title || "")) return;
+          try {
+            await window.db.collection("movies").doc(movie.id).update({ title: newTitle });
+            movie.title = newTitle;
+          } catch (e) { console.error("Error updating movie:", e); }
+        });
+        textInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") textInput.blur();
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "todo-item-actions";
+
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "todo-delete-btn todo-icon-btn";
+        delBtn.textContent = "🗑️";
+        delBtn.title = "Delete";
+        delBtn.addEventListener("click", async () => {
+          try {
+            await window.db.collection("movies").doc(movie.id).delete();
+            li.remove();
+            if (!$("movieList").children.length) $("movieEmpty").style.display = "block";
+          } catch (e) { console.error("Error deleting movie:", e); }
+        });
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "todo-edit-btn todo-icon-btn";
+        editBtn.textContent = "✏️";
+        editBtn.title = "Edit";
+        editBtn.addEventListener("click", () => {
+          textInput.focus();
+          textInput.select();
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+        li.appendChild(cb);
+        li.appendChild(textInput);
+        li.appendChild(actions);
+        return li;
+      }
+
+      $("movieAddBtn").addEventListener("click", async () => {
+        const input = $("movieNewInput");
+        const title = input.value.trim();
+        if (!title) return;
+        if (!window.auth.currentUser) { alert("Sign in to add movies."); return; }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const payload = {
+            title,
+            watched: false,
+            createdBy: uid,
+            createdAtMs: Date.now(),
+          };
+          const ref = await window.db.collection("movies").add(payload);
+          const movie = { id: ref.id, ...payload };
+          $("movieList").appendChild(createMovieItem(movie));
+          $("movieEmpty").style.display = "none";
+          input.value = "";
+        } catch (e) {
+          console.error("Error adding movie:", e);
+          alert("Failed to add movie.");
+        }
+      });
+
+      $("movieNewInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") $("movieAddBtn").click();
       });
 
       // ─── Can Wait Tasks ─────────────────────────────────────

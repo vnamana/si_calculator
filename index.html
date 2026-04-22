@@ -1951,7 +1951,7 @@
         </div>
 
         <div class="mf-card">
-          <h3>Due Dates</h3>
+          <h3>Cards</h3>
           <div class="due-input-row">
             <input
               type="text"
@@ -1974,7 +1974,7 @@
             <button type="button" id="dueAddBtn">Add</button>
           </div>
           <ul class="due-list" id="dueList"></ul>
-          <p class="emi-empty" id="dueEmpty" style="display:none">No due dates yet.</p>
+          <p class="emi-empty" id="dueEmpty" style="display:none">No cards yet.</p>
         </div>
 
         <!-- Todo Tasks -->
@@ -4968,7 +4968,7 @@
 
       $("dueAddBtn").addEventListener("click", async () => {
         if (!window.auth.currentUser) {
-          alert("Sign in to add due dates.");
+          alert("Sign in to add cards.");
           return;
         }
 

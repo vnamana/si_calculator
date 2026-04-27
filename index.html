@@ -5218,6 +5218,29 @@
         }
       }
 
+      async function moveTaskBetweenLists(task, fromCollection, toCollection) {
+        if (!task || !task.id) return false;
+        try {
+          const sourceRef = window.db.collection(fromCollection).doc(task.id);
+          const targetRef = window.db.collection(toCollection).doc();
+          const payload = {
+            text: task.text || "",
+            done: Boolean(task.done),
+            createdBy: task.createdBy || (window.auth.currentUser ? window.auth.currentUser.uid : ""),
+            createdAtMs: Number.isFinite(Number(task.createdAtMs)) ? Number(task.createdAtMs) : Date.now(),
+          };
+
+          const batch = window.db.batch();
+          batch.set(targetRef, payload);
+          batch.delete(sourceRef);
+          await batch.commit();
+          return true;
+        } catch (error) {
+          console.error("Error moving task:", error);
+          return false;
+        }
+      }
+
       function createTodoItem(todo) {
         const li = document.createElement("li");
         li.className = "todo-item" + (todo.done ? " completed" : "");
@@ -5252,6 +5275,21 @@
         const actions = document.createElement("div");
         actions.className = "todo-item-actions";
 
+        const moveBtn = document.createElement("button");
+        moveBtn.type = "button";
+        moveBtn.className = "todo-edit-btn todo-icon-btn";
+        moveBtn.textContent = "⇩";
+        moveBtn.title = "Move to Can wait";
+        moveBtn.addEventListener("click", async () => {
+          const moved = await moveTaskBetweenLists(todo, "todos", "waitTasks");
+          if (!moved) {
+            alert("Failed to move task.");
+            return;
+          }
+          await loadTodos();
+          await loadWaitTasks();
+        });
+
         const delBtn = document.createElement("button");
         delBtn.type = "button";
         delBtn.className = "todo-delete-btn todo-icon-btn";
@@ -5275,6 +5313,7 @@
           textInput.select();
         });
 
+        actions.appendChild(moveBtn);
         actions.appendChild(editBtn);
         actions.appendChild(delBtn);
         li.appendChild(cb);
@@ -5500,6 +5539,21 @@
         const actions = document.createElement("div");
         actions.className = "todo-item-actions";
 
+        const moveBtn = document.createElement("button");
+        moveBtn.type = "button";
+        moveBtn.className = "todo-edit-btn todo-icon-btn";
+        moveBtn.textContent = "⇧";
+        moveBtn.title = "Move to Keep an eye";
+        moveBtn.addEventListener("click", async () => {
+          const moved = await moveTaskBetweenLists(task, "waitTasks", "todos");
+          if (!moved) {
+            alert("Failed to move task.");
+            return;
+          }
+          await loadWaitTasks();
+          await loadTodos();
+        });
+
         const delBtn = document.createElement("button");
         delBtn.type = "button";
         delBtn.className = "todo-delete-btn todo-icon-btn";
@@ -5523,6 +5577,7 @@
           textInput.select();
         });
 
+        actions.appendChild(moveBtn);
         actions.appendChild(editBtn);
         actions.appendChild(delBtn);
         li.appendChild(cb);

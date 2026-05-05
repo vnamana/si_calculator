@@ -314,6 +314,23 @@
         border-color: #2c5364;
       }
 
+      .todo-input-row textarea {
+        flex: 1;
+        padding: 8px 10px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-family: inherit;
+        outline: none;
+        resize: vertical;
+        min-height: 56px;
+        line-height: 1.3;
+      }
+
+      .todo-input-row textarea:focus {
+        border-color: #2c5364;
+      }
+
       .todo-input-row button {
         padding: 8px 14px;
         border: none;
@@ -369,6 +386,13 @@
       .todo-text:focus {
         background: #f0f7fa;
         border: 1px solid #d8e8ee;
+      }
+
+      .planner-note-text {
+        min-height: 44px;
+        line-height: 1.3;
+        resize: vertical;
+        white-space: pre-wrap;
       }
 
       .todo-item-actions {
@@ -1986,6 +2010,17 @@
           </div>
           <ul class="todo-list" id="todoList"></ul>
           <p class="emi-empty" id="todoEmpty" style="display:none">No tasks yet.</p>
+        </div>
+
+        <!-- Notes -->
+        <div class="mf-card">
+          <h3>Notes</h3>
+          <div class="todo-input-row">
+            <textarea id="plannerNoteNewInput" placeholder="Write note (up to 2 lines)..." rows="2"></textarea>
+            <button type="button" id="plannerNoteAddBtn">Add</button>
+          </div>
+          <ul class="todo-list" id="plannerNoteList"></ul>
+          <p class="emi-empty" id="plannerNoteEmpty" style="display:none">No notes yet.</p>
         </div>
 
         <!-- Can Wait Tasks -->
@@ -4023,6 +4058,7 @@
           await loadCashflowRecords();
           await loadDueDates();
           await loadTodos();
+          await loadPlannerNotes();
           await loadMovies();
           await loadWaitTasks();
           await loadEmis();
@@ -4041,6 +4077,7 @@
           $("cashflowSavedList").innerHTML = "";
           $("dueList").innerHTML = "";
           $("todoList").innerHTML = "";
+          $("plannerNoteList").innerHTML = "";
           $("movieList").innerHTML = "";
           $("waitList").innerHTML = "";
           $("emiTableBody").innerHTML = "";
@@ -5349,6 +5386,132 @@
 
       $("todoNewInput").addEventListener("keydown", (e) => {
         if (e.key === "Enter") $("todoAddBtn").click();
+      });
+
+      function normalizeTwoLineNote(rawText) {
+        return String(rawText || "")
+          .replace(/\r/g, "")
+          .split("\n")
+          .slice(0, 2)
+          .join("\n")
+          .trim();
+      }
+
+      // ─── Notes ─────────────────────────────────────────────
+      async function loadPlannerNotes() {
+        const list = $("plannerNoteList");
+        list.innerHTML = "";
+
+        if (!window.auth.currentUser) {
+          $("plannerNoteEmpty").style.display = "block";
+          return;
+        }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const snap = await window.db
+            .collection("plannerNotes")
+            .where("createdBy", "==", uid)
+            .orderBy("createdAtMs", "asc")
+            .get();
+
+          const notes = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+          $("plannerNoteEmpty").style.display = notes.length ? "none" : "block";
+
+          notes.forEach((note) => {
+            list.appendChild(createPlannerNoteItem(note));
+          });
+        } catch (error) {
+          console.error("Error loading planner notes:", error);
+          $("plannerNoteEmpty").style.display = "block";
+        }
+      }
+
+      function createPlannerNoteItem(note) {
+        const li = document.createElement("li");
+        li.className = "todo-item";
+        li.dataset.id = note.id;
+
+        const textInput = document.createElement("textarea");
+        textInput.className = "todo-text planner-note-text";
+        textInput.rows = 2;
+        textInput.value = normalizeTwoLineNote(note.text || "");
+        textInput.addEventListener("blur", async () => {
+          const newText = normalizeTwoLineNote(textInput.value);
+          if (!newText || newText === normalizeTwoLineNote(note.text || "")) {
+            textInput.value = normalizeTwoLineNote(note.text || "");
+            return;
+          }
+          try {
+            await window.db.collection("plannerNotes").doc(note.id).update({ text: newText });
+            note.text = newText;
+            textInput.value = newText;
+          } catch (e) { console.error("Error updating planner note:", e); }
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "todo-item-actions";
+
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "todo-delete-btn todo-icon-btn";
+        delBtn.textContent = "🗑️";
+        delBtn.title = "Delete";
+        delBtn.addEventListener("click", async () => {
+          try {
+            await window.db.collection("plannerNotes").doc(note.id).delete();
+            li.remove();
+            if (!$("plannerNoteList").children.length) $("plannerNoteEmpty").style.display = "block";
+          } catch (e) { console.error("Error deleting planner note:", e); }
+        });
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "todo-edit-btn todo-icon-btn";
+        editBtn.textContent = "✏️";
+        editBtn.title = "Edit";
+        editBtn.addEventListener("click", () => {
+          textInput.focus();
+          textInput.select();
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+        li.appendChild(textInput);
+        li.appendChild(actions);
+        return li;
+      }
+
+      $("plannerNoteAddBtn").addEventListener("click", async () => {
+        const input = $("plannerNoteNewInput");
+        const text = normalizeTwoLineNote(input.value);
+        if (!text) return;
+        if (!window.auth.currentUser) { alert("Sign in to add notes."); return; }
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const payload = {
+            text,
+            createdBy: uid,
+            createdAtMs: Date.now(),
+          };
+          const ref = await window.db.collection("plannerNotes").add(payload);
+          const note = { id: ref.id, ...payload };
+          $("plannerNoteList").appendChild(createPlannerNoteItem(note));
+          $("plannerNoteEmpty").style.display = "none";
+          input.value = "";
+        } catch (e) {
+          console.error("Error adding planner note:", e);
+          alert("Failed to add note.");
+        }
+      });
+
+      $("plannerNoteNewInput").addEventListener("keydown", (e) => {
+        const lines = e.currentTarget.value.replace(/\r/g, "").split("\n");
+        if (e.key === "Enter" && !e.shiftKey && lines.length >= 2) {
+          e.preventDefault();
+          $("plannerNoteAddBtn").click();
+        }
       });
 
       // ─── Movies ──────────────────────────────────────────────

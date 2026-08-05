@@ -4336,7 +4336,12 @@ console.log(containerId, items);
     item.itemId ||
     item.categoryId ||
     item.name;
-
+console.log(
+    labelPrefix,
+    index,
+    item,
+    selectedValue
+);
         const row = createMoneyRowElement(
             `${labelPrefix} ${index + 1}`,
             item.amount ?? 0,

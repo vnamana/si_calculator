@@ -108,10 +108,7 @@ const MASTER = {
         { id: "icici_personal_loan1", name: "ICICI Personal Loan 1" },
         { id: "icici_personal_loan2", name: "ICICI Personal Loan 2" },
         { id: "navi_personal_loan", name: "Navi Personal Loan" },
-        { id: "lic_loan", name: "LIC Loan" }
+        { id: "lic_personal_loan", name: "LIC Personal Loan" }
     ],
 
-    loanInterestTypes: [
-        { id: "lic_interest", name: "LIC Interest" }
-    ]
 };

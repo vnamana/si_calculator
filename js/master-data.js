@@ -41,7 +41,7 @@ const MASTER = {
         { id: "power", name: "Power", icon: "⚡", color: "#CA8A04" },
         { id: "gas", name: "Gas", icon: "🔥", color: "#EA580C" },
         { id: "fuel", name: "Fuel", icon: "⛽", color: "#0891B2" },
-        { id: "loan", name: "Loan EMI", icon: "🏦", color: "#7E57C2" },
+        { id: "loan_emi", name: "Loan EMI", icon: "🏦", color: "#7E57C2" },
         { id: "loan_interest", name: "Loan Interest", icon: "📉", color: "#9333EA" },
         { id: "credit_cards", name: "Credit Cards", icon: "💳", color: "#7C2D12" },
         { id: "entertainment", name: "Entertainment", icon: "🎬", color: "#EC407A" },

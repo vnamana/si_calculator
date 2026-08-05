@@ -4308,30 +4308,35 @@ function generateId() {
         return items;
       }
 
-      function fillMoneyRows(containerId, labelPrefix, items) {
-        const container = $(containerId);
-        container.innerHTML = "";
+      function fillMoneyRows(containerId, labelPrefix, items, options = null) {
 
-        if (!Array.isArray(items) || !items.length) {
-          addMoneyRow(containerId, labelPrefix);
-          return;
-        }
+    const container = $(containerId);
+    container.innerHTML = "";
 
-        items.forEach((item, index) => {
-    const options =
-    containerId === "cardBillRows"
-        ? MASTER.creditCards
-        : null;
+    if (!Array.isArray(items) || !items.length) {
+        addMoneyRow(containerId, labelPrefix);
+        return;
+    }
 
-const row = createMoneyRowElement(
-    `${labelPrefix} ${index + 1}`,
-    item?.amount ?? 0,
-    item?.itemId ?? item?.name ?? "",
-    options
-);
-    container.appendChild(row);
-});
-      }
+    items.forEach((item, index) => {
+
+        const selectedValue = resolveAlias(
+            item.categoryId ??
+            item.itemId ??
+            item.name,
+            options
+        );
+
+        const row = createMoneyRowElement(
+            `${labelPrefix} ${index + 1}`,
+            item.amount ?? 0,
+            selectedValue,
+            options
+        );
+
+        container.appendChild(row);
+    });
+}
 
       function getCashflowTotals() {
         const incomeTotal = getMoneyRowsTotal("incomeRows");
@@ -4365,14 +4370,33 @@ const row = createMoneyRowElement(
 
       function populateCashflowFromRecord(record) {
         $("cashflowRecordName").value = record.name || "";
-        fillMoneyRows("incomeRows", "Income", record.incomes || []);
-        fillMoneyRows("cardBillRows", "Bill", record.cardBills || record.bills || []);
-        fillMoneyRows("expenseRows", "Expense", record.otherExpenses || record.expenses || []);
-        renderCashflowTotals({
-          incomeTotal: Number(record.totalIncome || 0),
-          outflow: Number(record.totalOutflow || 0),
-          leftover: Number(record.leftover || 0),
-        });
+
+fillMoneyRows(
+    "incomeRows",
+    "Income",
+    record.incomes || [],
+    MASTER.incomeCategories
+);
+
+fillMoneyRows(
+    "cardBillRows",
+    "Bill",
+    record.cardBills || record.bills || [],
+    MASTER.creditCards
+);
+
+fillMoneyRows(
+    "expenseRows",
+    "Expense",
+    record.otherExpenses || record.expenses || [],
+    MASTER.expenseCategories
+);
+
+renderCashflowTotals({
+    incomeTotal: Number(record.totalIncome || 0),
+    outflow: Number(record.totalOutflow || 0),
+    leftover: Number(record.leftover || 0),
+});
       }
 
       async function deleteCashflowRecord(recordId) {

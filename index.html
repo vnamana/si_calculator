@@ -4216,9 +4216,14 @@ function generateId() {
         select.className = "mf-money-name";
 
         const defaultOption = document.createElement("option");
-        defaultOption.value = "";
-        defaultOption.textContent = namePlaceholder;
-        select.appendChild(defaultOption);
+defaultOption.value = "";
+defaultOption.textContent = namePlaceholder;
+
+if (!name) {
+    defaultOption.selected = true;
+}
+
+select.appendChild(defaultOption);
 
         options.forEach(option => {
             const opt = document.createElement("option");
@@ -4234,7 +4239,9 @@ function generateId() {
 
             select.appendChild(opt);
         });
-
+if (name) {
+    defaultOption.remove();
+}
         nameControl = select;
 
     } else {

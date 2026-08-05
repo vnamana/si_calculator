@@ -4277,36 +4277,48 @@ function generateId() {
 }
 
       function collectMoneyRows(containerId, labelPrefix) {
-        const rows = Array.from($(containerId).querySelectorAll(".mf-money-row"));
-        const items = [];
+    const rows = Array.from($(containerId).querySelectorAll(".mf-money-row"));
+    const items = [];
 
-        rows.forEach((row, index) => {
-          const nameInput = row.querySelector(".mf-money-name");
-          const amountInput = row.querySelector(".mf-money-input");
-          if (!nameInput || !amountInput) return;
+    rows.forEach((row, index) => {
+        const nameInput = row.querySelector(".mf-money-name");
+        const amountInput = row.querySelector(".mf-money-input");
 
-          const name = (nameInput.value || "").trim() || `${labelPrefix} ${index + 1}`;
-          const amountRaw = (amountInput.value || "").trim();
+        if (!nameInput || !amountInput) return;
 
-          const amount = parseNonNegativeNumber(amountRaw);
-          if (Number.isFinite(amount)) {
+        const amountRaw = (amountInput.value || "").trim();
+
+        let name = `${labelPrefix} ${index + 1}`;
+        let categoryId = null;
+        let itemId = null;
+
+        if (nameInput.tagName === "SELECT") {
+            itemId = (nameInput.value || "").trim();
+
+            if (nameInput.selectedIndex >= 0) {
+                name = nameInput.options[nameInput.selectedIndex].text;
+            }
+        } else {
+            name = (nameInput.value || "").trim() || name;
+        }
+
+        const amount = parseNonNegativeNumber(amountRaw);
+
+        if (Number.isFinite(amount)) {
             items.push({
-    id: crypto.randomUUID(),
+                id: crypto.randomUUID(),
+                name,
+                amount,
+                categoryId,
+                itemId,
+                notes: "",
+                createdAtMs: Date.now()
+            });
+        }
+    });
 
-    name,
-    amount,
-
-    categoryId: null,
-    itemId: null,
-
-    notes: "",
-
-    createdAtMs: Date.now()
-});
-          }
-});
-        return items;
-      }
+    return items;
+}
 
       function fillMoneyRows(containerId, labelPrefix, items, options = null) {
 

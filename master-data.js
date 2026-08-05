@@ -41,29 +41,22 @@ const MASTER = {
         { id: "power", name: "Power", icon: "⚡", color: "#CA8A04" },
         { id: "gas", name: "Gas", icon: "🔥", color: "#EA580C" },
         { id: "fuel", name: "Fuel", icon: "⛽", color: "#0891B2" },
-
         { id: "loan", name: "Loan EMI", icon: "🏦", color: "#7E57C2" },
         { id: "loan_interest", name: "Loan Interest", icon: "📉", color: "#9333EA" },
-
         { id: "credit_cards", name: "Credit Cards", icon: "💳", color: "#7C2D12" },
         { id: "entertainment", name: "Entertainment", icon: "🎬", color: "#EC407A" },
         { id: "studies", name: "Studies", icon: "📚", color: "#2563EB" },
-
         { id: "other", name: "Other", icon: "🧩", color: "#6B7280" }
     ],
 
     creditCards: [
         { id: "amazon_pay_icici", name: "Amazon Pay ICICI", issuer: "ICICI", active: true },
         { id: "icici_coral", name: "ICICI Coral", issuer: "ICICI", active: true },
-        { id: "icici_hpcl", name: "ICICI HPCL", issuer: "ICICI", active: false },
-
+        { id: "icici_hpcl", name: "ICICI HPCL", issuer: "ICICI", active: true },
         { id: "sbi_phonepe_black", name: "SBI PhonePe Black", issuer: "SBI", active: true },
-
         { id: "axis_rewards", name: "Axis Rewards", issuer: "Axis", active: true },
-
         { id: "hdfc_swiggy", name: "HDFC Swiggy", issuer: "HDFC", active: true },
         { id: "hdfc_rupay", name: "HDFC Rupay", issuer: "HDFC", active: true },
-
         { id: "jupiter", name: "Jupiter", issuer: "Jupiter", active: true }
     ],
 
@@ -71,16 +64,11 @@ const MASTER = {
         { id: "ppfas", name: "PPFAS Flexi Cap", type: "mutual_fund" },
         { id: "bandhan_small_cap", name: "Bandhan Small Cap", type: "mutual_fund" },
         { id: "helios_flexi_cap", name: "Helios Flexi Cap", type: "mutual_fund" },
-
         { id: "bond", name: "Corporate Bond", type: "bond" },
-
         { id: "gold", name: "Gold", type: "gold" },
-
         { id: "nps", name: "NPS", type: "retirement" },
         { id: "epf", name: "EPF", type: "retirement" },
-
         { id: "chit_fund", name: "Chitti", type: "chit_fund" },
-
         { id: "jupiter_pot", name: "Jupiter Pot", type: "savings" }
     ],
 
@@ -116,14 +104,10 @@ const MASTER = {
     loans: [
         { id: "home_loan", name: "Home Loan" },
         { id: "home_loan_topup", name: "Home Loan Top-up" },
-
         { id: "car_loan", name: "Car Loan" },
-
         { id: "icici_personal_loan1", name: "ICICI Personal Loan 1" },
         { id: "icici_personal_loan2", name: "ICICI Personal Loan 2" },
-
         { id: "navi_personal_loan", name: "Navi Personal Loan" },
-
         { id: "lic_loan", name: "LIC Loan" }
     ],
 

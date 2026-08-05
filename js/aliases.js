@@ -140,3 +140,35 @@ const ALIASES = {
     }
 
 };
+
+function normalizeAlias(value) {
+
+    return (value || "")
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+
+}
+
+function findAlias(type, text) {
+
+    if (!text) return null;
+
+    const aliases = ALIASES[type];
+
+    if (!aliases)
+        return null;
+
+    const normalized = normalizeAlias(text);
+
+    for (const id in aliases) {
+
+        if (aliases[id].includes(normalized))
+            return id;
+
+    }
+
+    return null;
+
+}

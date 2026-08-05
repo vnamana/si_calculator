@@ -38,6 +38,7 @@ function migrateLegacyRecord(record) {
     record.otherExpenses = migrateItems(record.otherExpenses, "expense");
 record.income = classifyIncomeItems(record.income);
 record.creditCards = classifyCreditCardItems(record.creditCards);
+    console.log("After Classify:", record.creditCards);
 record.otherExpenses = classifyExpenseItems(record.otherExpenses);
     return record;
 }

@@ -1,5 +1,6 @@
 const MASTER = {
     app: {
+        schemaVersion: 1,
         version: "0.3",
         currency: "INR",
         currencySymbol: "₹",
@@ -7,15 +8,22 @@ const MASTER = {
         dateFormat: "DD-MMM-YYYY",
     },
 
+    transactionTypes: [
+        { id: "income", name: "Income" },
+        { id: "expense", name: "Expense" },
+        { id: "investment", name: "Investment" },
+        { id: "transfer", name: "Transfer" },
+    ],
+
     incomeCategories: [
-        { id: "salary", name: "Salary", icon: "💼", color: "#2E7D32" },
-        { id: "bonus", name: "Bonus", icon: "🎉", color: "#F59E0B" },
-        { id: "interest", name: "Interest", icon: "📈", color: "#2563EB" },
-        { id: "family", name: "Family", icon: "👨‍👩‍👧", color: "#EC4899" },
-        { id: "gift", name: "Gift", icon: "🎁", color: "#8B5CF6" },
-        { id: "friends", name: "Friends", icon: "🤝", color: "#14B8A6" },
-        { id: "bank_interest", name: "Bank Interest or Deposit", icon: "🏦", color: "#0EA5E9" },
-        { id: "other", name: "Other", icon: "🧩", color: "#6B7280" },
+        { id: "salary", name: "Salary", icon: "💼", color: "#2E7D32", sortOrder: 1 },
+        { id: "family", name: "Family", icon: "👨‍👩‍👧", color: "#EC4899", sortOrder: 2 },
+        { id: "friends", name: "Friends", icon: "🤝", color: "#14B8A6", sortOrder: 3 },
+        { id: "bonus", name: "Bonus", icon: "🎉", color: "#F59E0B", sortOrder: 4 },
+        { id: "interest", name: "Interest", icon: "📈", color: "#2563EB", sortOrder: 5 },
+        { id: "gift", name: "Gift", icon: "🎁", color: "#8B5CF6", sortOrder: 6 },
+        { id: "bank_interest", name: "Bank Interest or Deposit", icon: "🏦", color: "#0EA5E9", sortOrder: 7 },
+        { id: "other", name: "Other", icon: "🧩", color: "#6B7280", sortOrder: 8 },
     ],
 
     expenseCategories: [
@@ -40,26 +48,26 @@ const MASTER = {
     ],
 
     creditCards: [
-        { id: "amazon_pay_icici", name: "Amazon Pay ICICI", "active": true },
-        { id: "sbi_phonepe_black", name: "SBI PhonePe Black", "active": true },
-        { id: "icici_coral", name: "ICICI Coral", "active": true },
-        { id: "axis_rewards", name: "Axis Rewards", "active": true },
-        { id: "hdfc_swiggy", name: "HDFC Swiggy", "active": true },
-        { id: "hdfc_rupay", name: "HDFC Rupay", "active": true },
-        { id: "all_cards", name: "All Cards Bill", "active": true },
+        { id: "amazon_pay_icici", name: "Amazon Pay ICICI", "active": true, issuer: "ICICI" },
+        { id: "sbi_phonepe_black", name: "SBI PhonePe Black", "active": true, issuer: "SBI" },
+        { id: "icici_coral", name: "ICICI Coral", "active": true, issuer: "ICICI" },
+        { id: "axis_rewards", name: "Axis Rewards", "active": true, issuer: "Axis" },
+        { id: "hdfc_swiggy", name: "HDFC Swiggy", "active": true, issuer: "HDFC" },
+        { id: "hdfc_rupay", name: "HDFC Rupay", "active": true, issuer: "HDFC" },
+        { id: "all_cards", name: "All Cards Bill", "active": true, issuer: "Multiple" },
     ],
 
     investments: [
-        { id: "ppfas", name: "PPFAS Flexi Cap" },
-        { id: "bandhan_small_cap", name: "Bandhan Small Cap" },
-        { id: "helios_flexi_cap", name: "Helios Flexi Cap" },
-        { id: "chit_fund", name: "Chitti" },
-        { id: "nps", name: "NPS" },
-        { id: "bond", name: "Bond Investment" },
-        { id: "gold", name: "Gold" },
-        { id: "epf", name: "Provident Fund" },
+        { id: "ppfas", name: "PPFAS Flexi Cap", type:"mutual_fund" },
+        { id: "bandhan_small_cap", name: "Bandhan Small Cap", type:"mutual_fund" },
+        { id: "helios_flexi_cap", name: "Helios Flexi Cap", type:"mutual_fund" },
+        { id: "chit_fund", name: "Chitti", type:"Chitti" },
+        { id: "nps", name: "NPS", type: "retirement" },
+        { id: "bond", name: "Bond Investment", type: "bond" },
+        { id: "gold", name: "Gold", type: "gold" },
+        { id: "epf", name: "Provident Fund", type: "retirement" },
     ],
-    InvestmentOwners: [
+    investmentOwners: [
         { id: "self", name: "Self" },
         { id: "father", name: "Father" },
     ],
@@ -72,11 +80,10 @@ const MASTER = {
     ],
 
     contacts: [
-        { id: "father", name: "Father", type:"Family" },
-        { id: "mother", name: "Mother", type:"Family" },
-        { id: "bavagaru", name: "Bavagaru", type:"Family" },
-        { id: "sister", name: "Sister", type:"Family" },
-        { id: "friend", name: "Friend", type:"Friend" },
+        { id: "father", name: "Father", type:"family" },
+        { id: "mother", name: "Mother", type:"family" },
+        { id: "bavagaru", name: "Bavagaru", type:"family" },
+        { id: "sister", name: "Sister", type:"family" },
     ],
 
     banks: [

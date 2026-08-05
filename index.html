@@ -2216,6 +2216,9 @@
         maximumFractionDigits: 0,
       });
 
+function generateId() {
+    return "id_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9);
+}
       const formatCurrency = (n) => inrFormatter.format(n);
       const formatCurrencyNoDecimals = (n) => inrFormatterNoDecimals.format(n);
       const HISTORY_KEY = "simple-interest-history-v1";

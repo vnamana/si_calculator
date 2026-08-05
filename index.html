@@ -4362,8 +4362,15 @@ function generateId() {
           }
 
           const records = snap.docs
-            .map((doc) => ({ id: doc.id, ...doc.data() }))
-            .sort((a, b) => Number(b.updatedAtMs || 0) - Number(a.updatedAtMs || 0));
+  .map((doc) => {
+    const record = {
+      id: doc.id,
+      ...doc.data(),
+    };
+
+    return migrateCashflowRecord(record);
+  })
+  .sort((a, b) => Number(b.updatedAtMs || 0) - Number(a.updatedAtMs || 0));
 
           if (!records.length) return;
 

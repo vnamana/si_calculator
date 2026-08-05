@@ -4320,12 +4320,10 @@ function generateId() {
 
     items.forEach((item, index) => {
 
-        const selectedValue = resolveAlias(
-            item.categoryId ??
-            item.itemId ??
-            item.name,
-            options
-        );
+        let selectedValue =
+    item.itemId ||
+    item.categoryId ||
+    item.name;
 
         const row = createMoneyRowElement(
             `${labelPrefix} ${index + 1}`,

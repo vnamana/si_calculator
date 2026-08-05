@@ -850,9 +850,25 @@
 
       .mf-money-row {
         display: grid;
-        grid-template-columns: 1fr 130px auto;
+        grid-template-columns: minmax(140px, 1fr) 120px 90px auto;
         gap: 8px;
         margin-top: 6px;
+      }
+
+      .mf-money-name {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .mf-money-name.select-narrow,
+      .mf-money-row select.mf-money-name {
+        max-width: 180px;
+      }
+
+      .mf-money-notes {
+        width: 100%;
+        min-width: 0;
+        max-width: 90px;
       }
 
       .mf-remove-row-btn {
@@ -923,6 +939,28 @@
       .mf-saved-actions {
         display: flex;
         gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .mf-saved-actions button {
+        border: 1px solid #d8e8ee;
+        background: #fff;
+        color: #2c5364;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 0.82rem;
+        cursor: pointer;
+      }
+
+      .mf-move-btn {
+        width: 34px;
+        padding: 6px 0;
+      }
+
+      .mf-saved-actions {
+        display: flex;
+        gap: 6px;
       }
 
       .mf-saved-chart-wrap {
@@ -937,6 +975,8 @@
       .mf-saved-chart-wrap.open {
         display: block;
       }
+
+      /* pagination removed - showing full saved list */
 
       .mf-saved-chart-canvas {
         display: block;
@@ -4137,6 +4177,229 @@ function generateId() {
       }
 
       let currentCashflowRecordId = null;
+      let cashflowRecordsCache = [];
+      let cashflowLoadRetries = 0;
+      const MAX_CASHFLOW_LOAD_RETRIES = 3;
+
+      function renderCashflowPage() {
+        const list = $("cashflowSavedList");
+        list.innerHTML = "";
+
+        if (!cashflowRecordsCache.length) {
+          return;
+        }
+
+        // Render full list (newest first)
+        cashflowRecordsCache.forEach((record, globalIndex) => {
+          const item = document.createElement("div");
+          item.className = "mf-saved-item";
+
+          const head = document.createElement("div");
+          head.className = "mf-saved-head";
+
+          const name = document.createElement("div");
+          name.className = "mf-saved-name";
+          name.textContent = record.name || "Cashflow Record";
+
+          const editBtn = document.createElement("button");
+          editBtn.type = "button";
+          editBtn.className = "mf-edit-btn";
+          editBtn.textContent = "Edit";
+          editBtn.addEventListener("click", () => {
+            populateCashflowFromRecord(record);
+            setCashflowEditMode(record.id);
+          });
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.type = "button";
+          deleteBtn.className = "mf-delete-btn";
+          deleteBtn.textContent = "Delete";
+          deleteBtn.addEventListener("click", () => {
+            deleteCashflowRecord(record.id);
+          });
+
+          const chartBtn = document.createElement("button");
+          chartBtn.type = "button";
+          chartBtn.className = "mf-chart-btn";
+          chartBtn.textContent = "Chart";
+
+          const moveUpBtn = document.createElement("button");
+          moveUpBtn.type = "button";
+          moveUpBtn.className = "mf-move-btn";
+          moveUpBtn.textContent = "↑";
+          moveUpBtn.disabled = globalIndex === 0;
+          moveUpBtn.addEventListener("click", () => reorderCashflowRecord(record.id, -1));
+
+          const moveDownBtn = document.createElement("button");
+          moveDownBtn.type = "button";
+          moveDownBtn.className = "mf-move-btn";
+          moveDownBtn.textContent = "↓";
+          moveDownBtn.disabled = globalIndex === cashflowRecordsCache.length - 1;
+          moveDownBtn.addEventListener("click", () => reorderCashflowRecord(record.id, 1));
+
+          const actions = document.createElement("div");
+          actions.className = "mf-saved-actions";
+          actions.appendChild(moveUpBtn);
+          actions.appendChild(moveDownBtn);
+          actions.appendChild(editBtn);
+          actions.appendChild(deleteBtn);
+          actions.appendChild(chartBtn);
+
+          head.appendChild(name);
+          head.appendChild(actions);
+
+          const ccBillsItems = Array.isArray(record.cardBills)
+            ? record.cardBills
+            : (Array.isArray(record.bills) ? record.bills : []);
+          const ccBillsTotal = ccBillsItems.reduce((sum, item) => {
+            const amount = Number(item && item.amount);
+            return sum + (Number.isFinite(amount) ? amount : 0);
+          }, 0);
+
+          const otherExpensesTotal = Math.max(0, Number(record.totalOutflow || 0) - ccBillsTotal);
+
+          const meta = document.createElement("div");
+          meta.className = "mf-saved-meta";
+          meta.textContent = `Income: ${formatCurrency(Number(record.totalIncome || 0))} | Expenses: ${formatCurrency(Number(record.totalOutflow || 0))} | Others: ${formatCurrency(otherExpensesTotal)} | CC Bills: ${formatCurrency(ccBillsTotal)} | Left: ${formatCurrency(Number(record.leftover || 0))}`;
+
+          const chartWrap = document.createElement("div");
+          chartWrap.className = "mf-saved-chart-wrap";
+          const chartCanvas = document.createElement("canvas");
+          chartCanvas.className = "mf-saved-chart-canvas";
+          chartWrap.appendChild(chartCanvas);
+
+          let recordChart = null;
+          chartBtn.addEventListener("click", () => {
+            const shouldOpen = !chartWrap.classList.contains("open");
+            chartWrap.classList.toggle("open", shouldOpen);
+            chartBtn.textContent = shouldOpen ? "Hide Chart" : "Chart";
+            if (!shouldOpen) return;
+            if (recordChart) return;
+            const segments = getCashflowPieSegments(record, ccBillsTotal);
+            const hasPositiveValue = segments.some((segment) => segment.value > 0);
+            if (!hasPositiveValue) {
+              chartWrap.innerHTML = "<p style='font-size:0.78rem;color:#888;text-align:center;padding:8px 0'>No values available for chart.</p>";
+              return;
+            }
+            recordChart = renderCashflowPieChart(chartCanvas, segments);
+          });
+
+          item.appendChild(head);
+          item.appendChild(meta);
+          item.appendChild(chartWrap);
+          list.appendChild(item);
+
+          requestAnimationFrame(() => {
+            const segments = getCashflowPieSegments(record, ccBillsTotal);
+            const hasPositiveValue = segments.some((segment) => segment.value > 0);
+            if (hasPositiveValue) {
+              recordChart = renderCashflowPieChart(chartCanvas, segments);
+            } else {
+              chartWrap.textContent = "No values available for chart.";
+            }
+          });
+        });
+      }
+
+      async function reorderCashflowRecord(recordId, direction) {
+        const index = cashflowRecordsCache.findIndex((rec) => rec.id === recordId);
+        if (index < 0) return;
+
+        const targetIndex = index + direction;
+        if (targetIndex < 0 || targetIndex >= cashflowRecordsCache.length) return;
+
+        const currentRecord = cashflowRecordsCache[index];
+        const targetRecord = cashflowRecordsCache[targetIndex];
+
+        const currentOrder = Number(currentRecord.sortOrder ?? Number(currentRecord.updatedAtMs || 0));
+        const targetOrder = Number(targetRecord.sortOrder ?? Number(targetRecord.updatedAtMs || 0));
+
+        // Keep a copy so we can revert on failure
+        const prevCache = cashflowRecordsCache.slice();
+
+        // Optimistically swap items in local cache and swap their sortOrder values
+        [cashflowRecordsCache[index], cashflowRecordsCache[targetIndex]] = [cashflowRecordsCache[targetIndex], cashflowRecordsCache[index]];
+        cashflowRecordsCache[index].sortOrder = currentOrder;
+        cashflowRecordsCache[targetIndex].sortOrder = targetOrder;
+
+        // Immediately update UI
+        try {
+          renderCashflowPage();
+        } catch (e) {
+          console.error('Error rendering after optimistic reorder:', e);
+        }
+
+        // Persist swap to backend
+        try {
+          await Promise.all([
+            window.db.collection("cashflowRecords").doc(currentRecord.id).update({ sortOrder: targetOrder }),
+            window.db.collection("cashflowRecords").doc(targetRecord.id).update({ sortOrder: currentOrder }),
+          ]);
+
+          // Refresh authoritative data
+          await loadCashflowRecords();
+        } catch (error) {
+          console.error("Error reordering cashflow records:", error);
+          // Revert UI to previous cache
+          cashflowRecordsCache = prevCache;
+          try { renderCashflowPage(); } catch (e) { console.error('Error rendering after revert:', e); }
+        }
+      }
+
+      async function loadCashflowRecords() {
+        const list = $("cashflowSavedList");
+        list.innerHTML = "";
+
+        if (!window.auth.currentUser) return;
+
+        try {
+          const uid = window.auth.currentUser.uid;
+          const email = window.auth.currentUser.email || "";
+
+          let snap = await window.db
+            .collection("cashflowRecords")
+            .where("createdBy", "==", uid)
+            .get();
+
+          if (snap.empty && email) {
+            snap = await window.db
+              .collection("cashflowRecords")
+              .where("createdBy", "==", email)
+              .get();
+          }
+
+          console.debug("loadCashflowRecords: fetched docs:", snap.size);
+          const records = snap.docs
+            .map((doc) => ({ id: doc.id, ...doc.data() }))
+            .map((record) => ({
+              ...record,
+              sortOrder:
+                record.sortOrder !== undefined && record.sortOrder !== null
+                  ? Number(record.sortOrder)
+                  : Number(record.updatedAtMs || 0),
+            }))
+            .sort((a, b) => Number(b.sortOrder) - Number(a.sortOrder));
+
+          console.debug("loadCashflowRecords: mapped records length", records.length, "current cache length", cashflowRecordsCache.length, "retries", cashflowLoadRetries);
+
+          // If server returned no records but we already have a non-empty local cache,
+          // the save/update may not have propagated to server yet. Retry a few times
+          // instead of clearing the UI immediately.
+          if (records.length === 0 && cashflowRecordsCache.length > 0 && cashflowLoadRetries < MAX_CASHFLOW_LOAD_RETRIES) {
+            cashflowLoadRetries += 1;
+            console.debug("loadCashflowRecords: empty results, scheduling retry", cashflowLoadRetries);
+            setTimeout(() => loadCashflowRecords(), 800);
+            return;
+          }
+
+          cashflowLoadRetries = 0;
+
+          cashflowRecordsCache = records;
+          renderCashflowPage();
+        } catch (error) {
+          console.error("Error loading cashflow records:", error);
+        }
+      }
 
       function getCashflowPieSegments(record, ccBillsTotal) {
         const income = Number(record.totalIncome || 0);
@@ -4198,7 +4461,8 @@ function generateId() {
     namePlaceholder,
     value = "",
     name = "",
-    options = null
+    options = null,
+    notes = ""
 ) {
 
     const row = document.createElement("div");
@@ -4211,33 +4475,22 @@ function generateId() {
         const select = document.createElement("select");
         select.className = "mf-money-name";
 
-        const defaultOption = document.createElement("option");
-defaultOption.value = "";
-defaultOption.textContent = namePlaceholder;
-
-if (!name) {
-    defaultOption.selected = true;
-}
-
-select.appendChild(defaultOption);
-
-        options.forEach(option => {
+        options.forEach((option, optionIndex) => {
             const opt = document.createElement("option");
             opt.value = option.id;
             opt.textContent = option.name;
 
             if (
                 option.id === name ||
-                option.name === name
+                option.name === name ||
+                (!name && optionIndex === 0)
             ) {
                 opt.selected = true;
             }
 
             select.appendChild(opt);
         });
-if (name) {
-    defaultOption.remove();
-}
+
         nameControl = select;
 
     } else {
@@ -4262,6 +4515,13 @@ if (name) {
             ? ""
             : String(value);
 
+    const notesInput = document.createElement("input");
+    notesInput.type = "text";
+    notesInput.placeholder = "Notes";
+    notesInput.maxLength = 20;
+    notesInput.className = "mf-money-input mf-money-notes";
+    notesInput.value = notes || "";
+
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
     removeBtn.className = "mf-remove-row-btn";
@@ -4274,6 +4534,7 @@ if (name) {
 
     row.appendChild(nameControl);
     row.appendChild(amountInput);
+    row.appendChild(notesInput);
     row.appendChild(removeBtn);
 
     return row;
@@ -4305,6 +4566,8 @@ if (name) {
             name = (nameInput.value || "").trim() || name;
         }
 
+        const notesInput = row.querySelector(".mf-money-notes");
+        const notes = (notesInput?.value || "").trim();
         const amount = parseNonNegativeNumber(amountRaw);
 
         if (Number.isFinite(amount)) {
@@ -4314,7 +4577,7 @@ if (name) {
                 amount,
                 categoryId,
                 itemId,
-                notes: "",
+                notes,
                 createdAtMs: Date.now()
             });
         }
@@ -4329,7 +4592,7 @@ if (name) {
     container.innerHTML = "";
 
     if (!Array.isArray(items) || !items.length) {
-        addMoneyRow(containerId, labelPrefix);
+        addMoneyRow(containerId, labelPrefix, options);
         return;
     }
 console.log(containerId, items);
@@ -4349,7 +4612,8 @@ console.log(
             `${labelPrefix} ${index + 1}`,
             item.amount ?? 0,
             selectedValue,
-            options
+            options,
+            item.notes || ""
         );
 
         container.appendChild(row);
@@ -4432,140 +4696,6 @@ renderCashflowTotals({
           console.error("Error deleting cashflow record:", error);
           const message = error && error.message ? error.message : "Unknown error";
           alert(`Failed to delete cashflow record. ${message}`);
-        }
-      }
-
-      async function loadCashflowRecords() {
-        const list = $("cashflowSavedList");
-        list.innerHTML = "";
-
-        if (!window.auth.currentUser) return;
-
-        try {
-          const uid = window.auth.currentUser.uid;
-          const email = window.auth.currentUser.email || "";
-
-          let snap = await window.db
-            .collection("cashflowRecords")
-            .where("createdBy", "==", uid)
-            .get();
-
-          if (snap.empty && email) {
-            snap = await window.db
-              .collection("cashflowRecords")
-              .where("createdBy", "==", email)
-              .get();
-          }
-
-          const records = snap.docs
-  .map((doc) => {
-    const record = {
-      id: doc.id,
-      ...doc.data(),
-    };
-
-    return record;
-  })
-  .sort((a, b) => Number(b.updatedAtMs || 0) - Number(a.updatedAtMs || 0));
-
-          if (!records.length) return;
-
-          records.forEach((record) => {
-            const item = document.createElement("div");
-            item.className = "mf-saved-item";
-
-            const head = document.createElement("div");
-            head.className = "mf-saved-head";
-
-            const name = document.createElement("div");
-            name.className = "mf-saved-name";
-            name.textContent = record.name || "Cashflow Record";
-
-            const editBtn = document.createElement("button");
-            editBtn.type = "button";
-            editBtn.className = "mf-edit-btn";
-            editBtn.textContent = "Edit";
-            editBtn.addEventListener("click", () => {
-              populateCashflowFromRecord(record);
-              setCashflowEditMode(record.id);
-            });
-
-            const deleteBtn = document.createElement("button");
-            deleteBtn.type = "button";
-            deleteBtn.className = "mf-delete-btn";
-            deleteBtn.textContent = "Delete";
-            deleteBtn.addEventListener("click", () => {
-              deleteCashflowRecord(record.id);
-            });
-
-            const chartBtn = document.createElement("button");
-            chartBtn.type = "button";
-            chartBtn.className = "mf-chart-btn";
-            chartBtn.textContent = "Chart";
-
-            const actions = document.createElement("div");
-            actions.className = "mf-saved-actions";
-            actions.appendChild(editBtn);
-            actions.appendChild(deleteBtn);
-            actions.appendChild(chartBtn);
-
-            head.appendChild(name);
-            head.appendChild(actions);
-
-            const ccBillsItems = Array.isArray(record.cardBills)
-              ? record.cardBills
-              : (Array.isArray(record.bills) ? record.bills : []);
-            const ccBillsTotal = ccBillsItems.reduce((sum, item) => {
-              const amount = Number(item && item.amount);
-              return sum + (Number.isFinite(amount) ? amount : 0);
-            }, 0);
-
-            const otherExpensesTotal = Math.max(0, Number(record.totalOutflow || 0) - ccBillsTotal);
-
-            const meta = document.createElement("div");
-            meta.className = "mf-saved-meta";
-            meta.textContent = `Income: ${formatCurrency(Number(record.totalIncome || 0))} | Expenses: ${formatCurrency(Number(record.totalOutflow || 0))} | Others: ${formatCurrency(otherExpensesTotal)} | CC Bills: ${formatCurrency(ccBillsTotal)} | Left: ${formatCurrency(Number(record.leftover || 0))}`;
-
-            const chartWrap = document.createElement("div");
-            chartWrap.className = "mf-saved-chart-wrap";
-            const chartCanvas = document.createElement("canvas");
-            chartCanvas.className = "mf-saved-chart-canvas";
-            chartWrap.appendChild(chartCanvas);
-
-            let recordChart = null;
-            chartBtn.addEventListener("click", () => {
-              const shouldOpen = !chartWrap.classList.contains("open");
-              chartWrap.classList.toggle("open", shouldOpen);
-              chartBtn.textContent = shouldOpen ? "Hide Chart" : "Chart";
-              if (!shouldOpen) return;
-              if (recordChart) return;
-              const segments = getCashflowPieSegments(record, ccBillsTotal);
-              const hasPositiveValue = segments.some((segment) => segment.value > 0);
-              if (!hasPositiveValue) {
-                chartWrap.innerHTML = "<p style='font-size:0.78rem;color:#888;text-align:center;padding:8px 0'>No values available for chart.</p>";
-                return;
-              }
-              recordChart = renderCashflowPieChart(chartCanvas, segments);
-            });
-
-            item.appendChild(head);
-            item.appendChild(meta);
-            item.appendChild(chartWrap);
-            list.appendChild(item);
-
-            // Auto-render chart immediately
-            requestAnimationFrame(() => {
-              const segments = getCashflowPieSegments(record, ccBillsTotal);
-              const hasPositiveValue = segments.some((segment) => segment.value > 0);
-              if (hasPositiveValue) {
-                recordChart = renderCashflowPieChart(chartCanvas, segments);
-              } else {
-                chartWrap.textContent = "No values available for chart.";
-              }
-            });
-          });
-        } catch (error) {
-          console.error("Error loading cashflow records:", error);
         }
       }
 
@@ -4747,9 +4877,9 @@ renderCashflowTotals({
         $("incomeRows").innerHTML = "";
         $("cardBillRows").innerHTML = "";
         $("expenseRows").innerHTML = "";
-        addMoneyRow("incomeRows", "Income");
-        addMoneyRow("cardBillRows", "Bill");
-        addMoneyRow("expenseRows", "Expense");
+        addMoneyRow("incomeRows", "Income", MASTER.incomeCategories);
+        addMoneyRow("cardBillRows", "Bill", MASTER.creditCards);
+        addMoneyRow("expenseRows", "Expense", MASTER.expenseCategories);
         $("leftoverResults").classList.remove("show");
         $("totalIncomeValue").textContent = "—";
         $("totalOutflowValue").textContent = "—";
@@ -4777,7 +4907,7 @@ renderCashflowTotals({
       }
 
       $("addIncomeBtn").addEventListener("click", () => {
-        addMoneyRow("incomeRows", "Income");
+        addMoneyRow("incomeRows", "Income", MASTER.incomeCategories);
       });
 
       $("addCardBillBtn").addEventListener("click", () => {
@@ -4789,7 +4919,7 @@ renderCashflowTotals({
 });
 
       $("addExpenseBtn").addEventListener("click", () => {
-        addMoneyRow("expenseRows", "Expense");
+        addMoneyRow("expenseRows", "Expense", MASTER.expenseCategories);
       });
 
       $("clearCashflowBtn").addEventListener("click", () => {
@@ -4829,6 +4959,10 @@ renderCashflowTotals({
         const recordName = $("cashflowRecordName").value.trim() || "Cashflow Record";
         const nowMs = Date.now();
 
+        const existingRecord = currentCashflowRecordId
+          ? cashflowRecordsCache.find((record) => record.id === currentCashflowRecordId)
+          : null;
+
         const payload = {
           name: recordName,
           incomes,
@@ -4838,11 +4972,16 @@ renderCashflowTotals({
           totalOutflow: totals.outflow,
           leftover: totals.leftover,
           updatedAtMs: nowMs,
+          sortOrder: existingRecord && existingRecord.sortOrder !== undefined
+            ? Number(existingRecord.sortOrder)
+            : nowMs,
           createdBy: window.auth.currentUser.uid,
           createdByEmail: window.auth.currentUser.email || "",
         };
 
         try {
+          const isNewRecord = !currentCashflowRecordId;
+
           if (currentCashflowRecordId) {
             try {
               await window.db
@@ -4861,7 +5000,25 @@ renderCashflowTotals({
           }
 
           setCashflowEditMode(currentCashflowRecordId);
-          await loadCashflowRecords();
+
+          // Optimistic update: update local cache so saved record appears immediately
+          const newRecord = {
+            id: currentCashflowRecordId,
+            ...payload,
+          };
+
+          if (isNewRecord) {
+            // put new record at top
+            cashflowRecordsCache.unshift(newRecord);
+          } else {
+            const idx = cashflowRecordsCache.findIndex((r) => r.id === currentCashflowRecordId);
+            if (idx >= 0) cashflowRecordsCache[idx] = { ...cashflowRecordsCache[idx], ...newRecord };
+            else cashflowRecordsCache.unshift(newRecord);
+          }
+
+          // render immediately, then refresh from backend asynchronously
+          renderCashflowPage();
+          loadCashflowRecords().catch((err) => console.error('Error reloading cashflow records after save:', err));
         } catch (error) {
           console.error("Error saving cashflow record:", error);
           const message = error && error.message ? error.message : "Unknown error";
@@ -4869,9 +5026,9 @@ renderCashflowTotals({
         }
       });
 
-      addMoneyRow("incomeRows", "Income");
-      addMoneyRow("cardBillRows", "Bill");
-      addMoneyRow("expenseRows", "Expense");
+      addMoneyRow("incomeRows", "Income", MASTER.incomeCategories);
+      addMoneyRow("cardBillRows", "Bill", MASTER.creditCards);
+      addMoneyRow("expenseRows", "Expense", MASTER.expenseCategories);
       setCashflowEditMode(null);
 
       $("clearCalcBtn").addEventListener("click", () => {

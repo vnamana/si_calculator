@@ -4468,7 +4468,7 @@ renderCashflowTotals({
       ...doc.data(),
     };
 
-    return migrateCashflowRecord(record);
+    return record;
   })
   .sort((a, b) => Number(b.updatedAtMs || 0) - Number(a.updatedAtMs || 0));
 

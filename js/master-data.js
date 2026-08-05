@@ -8,44 +8,29 @@ const MASTER = {
         dateFormat: "DD-MMM-YYYY",
     },
 
-    transactionTypes: [
-        { id: "income", name: "Income" },
-        { id: "expense", name: "Expense" },
-        { id: "investment", name: "Investment" },
-        { id: "transfer", name: "Transfer" }
-    ],
-
     incomeCategories: [
         { id: "salary", name: "Salary", icon: "💼", color: "#2E7D32", sortOrder: 1 },
         { id: "family", name: "Family", icon: "👨‍👩‍👧", color: "#EC4899", sortOrder: 2 },
         { id: "friends", name: "Friends", icon: "🤝", color: "#14B8A6", sortOrder: 3 },
         { id: "bonus", name: "Bonus", icon: "🎉", color: "#F59E0B", sortOrder: 4 },
         { id: "interest", name: "Interest", icon: "📈", color: "#2563EB", sortOrder: 5 },
-        { id: "gift", name: "Gift", icon: "🎁", color: "#8B5CF6", sortOrder: 6 },
-        { id: "bank_interest", name: "Bank Interest / FD Interest", icon: "🏦", color: "#0EA5E9", sortOrder: 7 },
+        { id: "refund", name: "refund", icon: "📈", color: "#2563EB", sortOrder: 6 },
+        { id: "mf_redemption", name: "MF Redemption", icon: "🔁", color: "#7C3AED", sortOrder: 7 },
+        { id: "opening_balance", name: "Opening Balance", icon: "🧾", color: "#06B6D4", sortOrder: 8 },
         { id: "other", name: "Other", icon: "🧩", color: "#6B7280", sortOrder: 99 }
     ],
 
     expenseCategories: [
         { id: "home", name: "Home", icon: "🏠", color: "#4F46E5" },
-        { id: "food", name: "Food & Dining", icon: "🍽️", color: "#F97316" },
-        { id: "transport", name: "Transport", icon: "🚌", color: "#0EA5E9" },
-        { id: "shopping", name: "Shopping", icon: "🛍️", color: "#DB2777" },
-        { id: "medical", name: "Medical", icon: "🩺", color: "#DC2626" },
-        { id: "subscription", name: "Subscriptions", icon: "📺", color: "#7C3AED" },
         { id: "investment", name: "Investment", icon: "📊", color: "#16A34A" },
+        { id: "mf_investment", name: "MF Investment", icon: "📈", color: "#1E40AF" },
         { id: "family", name: "Family", icon: "👪", color: "#E11D48" },
-        { id: "travel", name: "Travel", icon: "✈️", color: "#0284C7" },
-        { id: "insurance", name: "Insurance", icon: "🛡️", color: "#1D4ED8" },
-        { id: "tax", name: "Tax", icon: "🧾", color: "#B45309" },
-        { id: "power", name: "Power", icon: "⚡", color: "#CA8A04" },
-        { id: "gas", name: "Gas", icon: "🔥", color: "#EA580C" },
-        { id: "fuel", name: "Fuel", icon: "⛽", color: "#0891B2" },
-        { id: "loan_emi", name: "Loan EMI", icon: "🏦", color: "#7E57C2" },
+        { id: "bank_withdrawal", name: "Bank Withdrawal", icon: "🏧", color: "#0F172A" },
+        { id: "loan_emi", name: "Loan EMI", icon: "💸", color: "#DC2626" },
         { id: "loan_interest", name: "Loan Interest", icon: "📉", color: "#9333EA" },
-        { id: "credit_cards", name: "Credit Cards", icon: "💳", color: "#7C2D12" },
         { id: "entertainment", name: "Entertainment", icon: "🎬", color: "#EC407A" },
-        { id: "studies", name: "Studies", icon: "📚", color: "#2563EB" },
+        { id: "food", name: "Food & Dining", icon: "🍽️", color: "#F97316" },
+        { id: "travel", name: "Travel", icon: "✈️", color: "#0284C7" },
         { id: "other", name: "Other", icon: "🧩", color: "#6B7280" }
     ],
 
@@ -70,11 +55,6 @@ const MASTER = {
         { id: "epf", name: "EPF", type: "retirement" },
         { id: "chit_fund", name: "Chitti", type: "chit_fund" },
         { id: "jupiter_pot", name: "Jupiter Pot", type: "savings" }
-    ],
-
-    investmentOwners: [
-        { id: "self", name: "Self" },
-        { id: "father", name: "Father" }
     ],
 
     subscriptions: [

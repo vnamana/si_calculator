@@ -36,7 +36,9 @@ function migrateLegacyRecord(record) {
     record.income = migrateItems(record.income, "income");
     record.creditCards = migrateItems(record.creditCards, "credit_cards");
     record.otherExpenses = migrateItems(record.otherExpenses, "expense");
-
+record.income = classifyIncomeItems(record.income);
+record.creditCards = classifyCreditCardItems(record.creditCards);
+record.otherExpenses = classifyExpenseItems(record.otherExpenses);
     return record;
 }
 
@@ -78,6 +80,44 @@ function migrateItems(items, type) {
 
 }
 
+function classifyIncomeItems(items) {
+    return items.map(item => {
+        const categoryId = findAlias("income", item.name);
+        if (categoryId) item.categoryId = categoryId;
+        return item;
+    });
+}
+
+function classifyCreditCardItems(items) {
+    return items.map(item => {
+        const cardId = findAlias("creditCards", item.name);
+
+        if (cardId) {
+            item.categoryId = "credit_cards";
+            item.itemId = cardId;
+        }
+
+        return item;
+    });
+}
+
+function classifyExpenseItems(items) {
+    return items.map(item => {
+
+        const categoryId = findAlias("expenseCategories", item.name);
+
+        if (categoryId)
+            item.categoryId = categoryId;
+
+        if (categoryId === "loan_emi")
+            item.itemId = "home_loan";
+
+        if (categoryId === "loan_interest" && /lic/i.test(item.name))
+            item.itemId = "lic_personal_loan";
+
+        return item;
+    });
+}
 
 /* ===========================================================
  * Future Schema Examples

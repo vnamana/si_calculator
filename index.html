@@ -4198,38 +4198,83 @@ function generateId() {
         });
       }
 
-      function createMoneyRowElement(namePlaceholder, value = "", name = "") {
-        const row = document.createElement("div");
-        row.className = "mf-money-row";
+     function createMoneyRowElement(
+    namePlaceholder,
+    value = "",
+    name = "",
+    options = null
+) {
 
-        const nameInput = document.createElement("input");
-        nameInput.type = "text";
-        nameInput.placeholder = namePlaceholder;
-        nameInput.className = "mf-money-name";
-        nameInput.value = name;
+    const row = document.createElement("div");
+    row.className = "mf-money-row";
 
-        const amountInput = document.createElement("input");
-        amountInput.type = "text";
-        amountInput.inputMode = "decimal";
-        amountInput.pattern = "[0-9.,₹\\s]*";
-        amountInput.placeholder = "Amount";
-        amountInput.className = "mf-money-input";
-        amountInput.value = value === null || value === undefined ? "" : String(value);
+    let nameControl;
 
-        const removeBtn = document.createElement("button");
-        removeBtn.type = "button";
-        removeBtn.className = "mf-remove-row-btn";
-        removeBtn.setAttribute("aria-label", "Remove row");
-        removeBtn.textContent = "−";
-        removeBtn.addEventListener("click", () => {
-          row.remove();
+    if (Array.isArray(options) && options.length > 0) {
+
+        const select = document.createElement("select");
+        select.className = "mf-money-name";
+
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = namePlaceholder;
+        select.appendChild(defaultOption);
+
+        options.forEach(option => {
+            const opt = document.createElement("option");
+            opt.value = option.id;
+            opt.textContent = option.name;
+
+            if (
+                option.id === name ||
+                option.name === name
+            ) {
+                opt.selected = true;
+            }
+
+            select.appendChild(opt);
         });
 
-        row.appendChild(nameInput);
-        row.appendChild(amountInput);
-        row.appendChild(removeBtn);
-        return row;
-      }
+        nameControl = select;
+
+    } else {
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = namePlaceholder;
+        input.className = "mf-money-name";
+        input.value = name;
+
+        nameControl = input;
+    }
+
+    const amountInput = document.createElement("input");
+    amountInput.type = "text";
+    amountInput.inputMode = "decimal";
+    amountInput.pattern = "[0-9.,₹\\s]*";
+    amountInput.placeholder = "Amount";
+    amountInput.className = "mf-money-input";
+    amountInput.value =
+        value === null || value === undefined
+            ? ""
+            : String(value);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "mf-remove-row-btn";
+    removeBtn.setAttribute("aria-label", "Remove row");
+    removeBtn.textContent = "−";
+
+    removeBtn.addEventListener("click", () => {
+        row.remove();
+    });
+
+    row.appendChild(nameControl);
+    row.appendChild(amountInput);
+    row.appendChild(removeBtn);
+
+    return row;
+}
 
       function collectMoneyRows(containerId, labelPrefix) {
         const rows = Array.from($(containerId).querySelectorAll(".mf-money-row"));

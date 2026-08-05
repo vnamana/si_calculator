@@ -4239,7 +4239,19 @@
 
           const amount = parseNonNegativeNumber(amountRaw);
           if (Number.isFinite(amount)) {
-            items.push({ name, amount });
+            items.push({
+    id: crypto.randomUUID(),
+
+    name,
+    amount,
+
+    categoryId: null,
+    itemId: null,
+
+    notes: "",
+
+    createdAtMs: Date.now()
+});
           }
         });
 

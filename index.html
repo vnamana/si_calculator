@@ -4268,13 +4268,13 @@
         }
 
         items.forEach((item, index) => {
-          const row = createMoneyRowElement(
-            `${labelPrefix} ${index + 1}`,
-            item.amount,
-            item.name,
-          );
-          container.appendChild(row);
-        });
+    const row = createMoneyRowElement(
+        `${labelPrefix} ${index + 1}`,
+        item?.amount ?? 0,
+        item?.name ?? "",
+    );
+    container.appendChild(row);
+});
       }
 
       function getCashflowTotals() {

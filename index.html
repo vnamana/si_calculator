@@ -4318,11 +4318,17 @@ function generateId() {
         }
 
         items.forEach((item, index) => {
-    const row = createMoneyRowElement(
-        `${labelPrefix} ${index + 1}`,
-        item?.amount ?? 0,
-        item?.name ?? "",
-    );
+    const options =
+    containerId === "cardBillRows"
+        ? MASTER.creditCards
+        : null;
+
+const row = createMoneyRowElement(
+    `${labelPrefix} ${index + 1}`,
+    item?.amount ?? 0,
+    item?.itemId ?? item?.name ?? "",
+    options
+);
     container.appendChild(row);
 });
       }
@@ -4658,12 +4664,19 @@ function generateId() {
 
       syncSipStepupVisibility();
 
-      function addMoneyRow(containerId, labelPrefix) {
-        const container = $(containerId);
-        const nextIndex = container.children.length + 1;
-        const row = createMoneyRowElement(`${labelPrefix} ${nextIndex}`);
-        container.appendChild(row);
-      }
+      function addMoneyRow(containerId, labelPrefix, options = null) {
+    const container = $(containerId);
+    const nextIndex = container.children.length + 1;
+
+    const row = createMoneyRowElement(
+        `${labelPrefix} ${nextIndex}`,
+        "",
+        "",
+        options
+    );
+
+    container.appendChild(row);
+}
 
       function resetCalculatorForm() {
         $("principal").value = "";
@@ -4725,8 +4738,12 @@ function generateId() {
       });
 
       $("addCardBillBtn").addEventListener("click", () => {
-        addMoneyRow("cardBillRows", "Bill");
-      });
+    addMoneyRow(
+        "cardBillRows",
+        "Bill",
+        MASTER.creditCards
+    );
+});
 
       $("addExpenseBtn").addEventListener("click", () => {
         addMoneyRow("expenseRows", "Expense");

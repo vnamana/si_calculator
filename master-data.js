@@ -1,4 +1,4 @@
-const MASTER_DATA = {
+const MASTER = {
     app: {
         version: "0.3",
         currency: "INR",

@@ -44,6 +44,7 @@ const MASTER = {
         { id: "axis_rewards", name: "Axis Rewards", issuer: "Axis", active: true },
         { id: "hdfc_swiggy", name: "HDFC Swiggy", issuer: "HDFC", active: true },
         { id: "hdfc_rupay", name: "HDFC Rupay", issuer: "HDFC", active: true },
+        { id: "hsbc_live_plus", name: "HSBC Live Plus", issuer: "HSBC", active: true },
         { id: "jupiter", name: "Jupiter", issuer: "Jupiter", active: true }
     ],
 

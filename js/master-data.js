@@ -26,6 +26,7 @@ const MASTER = {
         { id: "mf_investment", name: "MF Investment", icon: "📈", color: "#1E40AF" },
         { id: "father_mf_investment", name: "Father MF Investment", icon: "👴", color: "#0B5A4A" },
         { id: "family", name: "Family", icon: "👪", color: "#E11D48" },
+        { id: "friends", name: "Friends", icon: "🤝", color: "#14B8A6" },
         { id: "loan_emi", name: "Loan EMI", icon: "💸", color: "#DC2626" },
         { id: "loan_interest", name: "Loan Interest", icon: "📉", color: "#9333EA" },
         { id: "bank_withdrawal", name: "Bank Withdrawal", icon: "🏧", color: "#0F172A" },
@@ -44,6 +45,7 @@ const MASTER = {
         { id: "axis_rewards", name: "Axis Rewards", issuer: "Axis", active: true },
         { id: "hdfc_swiggy", name: "HDFC Swiggy", issuer: "HDFC", active: true },
         { id: "hdfc_rupay", name: "HDFC Rupay", issuer: "HDFC", active: true },
+        { id: "kiwi_rupay", name: "Kiwi Rupay", issuer: "Kiwi", active: true },
         { id: "hsbc_live_plus", name: "HSBC Live Plus", issuer: "HSBC", active: true },
         { id: "jupiter", name: "Jupiter", issuer: "Jupiter", active: true }
     ],
